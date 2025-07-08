@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 # Configuración de la página
 st.set_page_config(
@@ -260,7 +261,6 @@ if '$device' in df.columns:
     
     with col2:
         # Gráfico de dispositivos
-        import plotly.express as px
         fig_device = px.pie(
             device_stats, 
             values='Total Clics', 
