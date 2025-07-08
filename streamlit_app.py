@@ -170,135 +170,180 @@ encabezado_con_logo("Reporte de Clics - Mixpanel")
 
 csv_path = "inputs/mixpanel_applicants_merged_20250708_100107.csv"
 
-# Leer solo las columnas necesarias
-cols = ["event", "userUuid", "date"]
+# Leer columnas necesarias para estadísticas básicas
+cols = ["event", "userUuid", "date", "$browser", "$os", "$device", "$current_url", "distinct_id"]
 try:
     df = pd.read_csv(csv_path, usecols=lambda c: c in cols, low_memory=False)
 except Exception as e:
     st.error(f"Error al leer el archivo: {e}")
     st.stop()
 
-# Estadísticas generales
-usuarios_unicos = df["userUuid"].nunique()
+# 🧮 ESTADÍSTICAS BÁSICAS
+st.markdown("## 🧮 Estadísticas Básicas")
+
+# 1. Número total de clics
 total_clics = len(df)
-promedio_clics = total_clics / usuarios_unicos if usuarios_unicos > 0 else 0
+usuarios_unicos = df["userUuid"].nunique()
+distinct_ids_unicos = df["distinct_id"].nunique()
 
-# Mostrar KPIs con el estilo del otro archivo
-st.markdown("""
-<div class="kpi-container">
-""", unsafe_allow_html=True)
+# 2. Clics únicos vs. clics totales
+clics_unicos_vs_totales = {
+    "Clics Totales": total_clics,
+    "Usuarios Únicos (userUuid)": usuarios_unicos,
+    "Usuarios Únicos (distinct_id)": distinct_ids_unicos,
+    "Promedio Clics por Usuario": round(total_clics / usuarios_unicos, 2) if usuarios_unicos > 0 else 0
+}
 
-col1, col2, col3 = st.columns(3)
+# Mostrar KPIs básicos
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(f"""
     <div class="kpi">
-        <h2>{usuarios_unicos:,}</h2>
-        <p>Usuarios únicos</p>
+        <h2>{total_clics:,}</h2>
+        <p>Total de Clics</p>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown(f"""
     <div class="kpi">
-        <h2>{total_clics:,}</h2>
-        <p>Total de clics (eventos)</p>
+        <h2>{usuarios_unicos:,}</h2>
+        <p>Usuarios Únicos</p>
     </div>
     """, unsafe_allow_html=True)
 
 with col3:
     st.markdown(f"""
     <div class="kpi">
-        <h2>{promedio_clics:.2f}</h2>
-        <p>Promedio de clics por usuario</p>
+        <h2>{distinct_ids_unicos:,}</h2>
+        <p>Distinct IDs Únicos</p>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("</div>", unsafe_allow_html=True)
+with col4:
+    st.markdown(f"""
+    <div class="kpi">
+        <h2>{clics_unicos_vs_totales['Promedio Clics por Usuario']}</h2>
+        <p>Promedio Clics/Usuario</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Estadísticas por tipo de evento
-st.subheader("📊 Estadísticas por Tipo de Evento")
+# 3. Clics por sección o elemento (event)
+st.markdown("### 📊 Clics por Sección/Elemento")
 
-# Calcular estadísticas por evento
 eventos_stats = df.groupby('event').agg({
     'userUuid': ['count', 'nunique']
 }).round(2)
 
-# Renombrar columnas
 eventos_stats.columns = ['Total Clics', 'Usuarios Únicos']
 eventos_stats = eventos_stats.reset_index()
-
-# Calcular promedio de clics por usuario para cada evento
 eventos_stats['Promedio Clics por Usuario'] = (eventos_stats['Total Clics'] / eventos_stats['Usuarios Únicos']).round(2)
-
-# Ordenar por total de clics (descendente)
 eventos_stats = eventos_stats.sort_values('Total Clics', ascending=False)
 
-# Mostrar tabla de estadísticas por evento
-st.markdown("### Tabla de Estadísticas por Evento")
-st.dataframe(eventos_stats, use_container_width=True)
+# Mostrar top 10 eventos
+st.markdown("#### Top 10 Eventos por Total de Clics")
+st.dataframe(eventos_stats.head(10), use_container_width=True)
 
-# Gráfico de barras para los eventos más populares
-st.markdown("### 📈 Top 10 Eventos por Total de Clics")
+# 4. Clics por tipo de dispositivo
+st.markdown("### 📱 Clics por Tipo de Dispositivo")
 
-# Tomar los top 10 eventos
-top_10_eventos = eventos_stats.head(10)
+if '$device' in df.columns:
+    device_stats = df['$device'].value_counts().reset_index()
+    device_stats.columns = ['Dispositivo', 'Total Clics']
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### Distribución por Dispositivo")
+        st.dataframe(device_stats, use_container_width=True)
+    
+    with col2:
+        # Gráfico de dispositivos
+        import plotly.express as px
+        fig_device = px.pie(
+            device_stats, 
+            values='Total Clics', 
+            names='Dispositivo',
+            title='Distribución de Clics por Dispositivo'
+        )
+        fig_device.update_layout(
+            plot_bgcolor='#eaefff',
+            paper_bgcolor='#eaefff',
+            font=dict(family="Inter", size=14, color="#333"),
+            title=dict(
+                font=dict(size=20, family="DM Sans", color="#0C1461"),
+                x=0.5,
+                xanchor='center'
+            )
+        )
+        st.plotly_chart(fig_device, use_container_width=True)
+else:
+    st.info("No hay información de dispositivo disponible en los datos")
 
-# Crear gráfico de barras
-import plotly.express as px
+# 5. Clics por navegador / sistema operativo
+st.markdown("### 🌐 Clics por Navegador y Sistema Operativo")
 
-fig = px.bar(
-    top_10_eventos,
-    x='event',
-    y='Total Clics',
-    title='Top 10 Eventos por Total de Clics',
-    color='Total Clics',
-    color_continuous_scale='Blues'
-)
+col1, col2 = st.columns(2)
 
-fig.update_layout(
-    xaxis_title="Tipo de Evento",
-    yaxis_title="Total de Clics",
-    plot_bgcolor='#eaefff',
-    paper_bgcolor='#eaefff',
-    font=dict(family="Inter", size=14, color="#333"),
-    title=dict(
-        font=dict(size=20, family="DM Sans", color="#0C1461"),
-        x=0.5,
-        xanchor='center'
+with col1:
+    if '$browser' in df.columns:
+        browser_stats = df['$browser'].value_counts().reset_index()
+        browser_stats.columns = ['Navegador', 'Total Clics']
+        st.markdown("#### Distribución por Navegador")
+        st.dataframe(browser_stats, use_container_width=True)
+    else:
+        st.info("No hay información de navegador disponible")
+
+with col2:
+    if '$os' in df.columns:
+        os_stats = df['$os'].value_counts().reset_index()
+        os_stats.columns = ['Sistema Operativo', 'Total Clics']
+        st.markdown("#### Distribución por Sistema Operativo")
+        st.dataframe(os_stats, use_container_width=True)
+    else:
+        st.info("No hay información de sistema operativo disponible")
+
+# 6. Clics por URL (sección/elemento)
+st.markdown("### 🔗 Clics por URL")
+
+if '$current_url' in df.columns:
+    url_stats = df['$current_url'].value_counts().reset_index()
+    url_stats.columns = ['URL', 'Total Clics']
+    
+    st.markdown("#### Top 10 URLs por Clics")
+    st.dataframe(url_stats.head(10), use_container_width=True)
+    
+    # Gráfico de URLs
+    fig_url = px.bar(
+        url_stats.head(10),
+        x='URL',
+        y='Total Clics',
+        title='Top 10 URLs por Total de Clics'
     )
-)
-
-fig.update_xaxes(tickangle=45)
-st.plotly_chart(fig, use_container_width=True)
-
-# Gráfico de promedio de clics por usuario
-st.markdown("### 📊 Promedio de Clics por Usuario (Top 10)")
-
-fig_promedio = px.bar(
-    top_10_eventos,
-    x='event',
-    y='Promedio Clics por Usuario',
-    title='Promedio de Clics por Usuario por Evento',
-    color='Promedio Clics por Usuario',
-    color_continuous_scale='Greens'
-)
-
-fig_promedio.update_layout(
-    xaxis_title="Tipo de Evento",
-    yaxis_title="Promedio de Clics por Usuario",
-    plot_bgcolor='#eaefff',
-    paper_bgcolor='#eaefff',
-    font=dict(family="Inter", size=14, color="#333"),
-    title=dict(
-        font=dict(size=20, family="DM Sans", color="#0C1461"),
-        x=0.5,
-        xanchor='center'
+    fig_url.update_layout(
+        xaxis_title="URL",
+        yaxis_title="Total de Clics",
+        plot_bgcolor='#eaefff',
+        paper_bgcolor='#eaefff',
+        font=dict(family="Inter", size=14, color="#333"),
+        title=dict(
+            font=dict(size=20, family="DM Sans", color="#0C1461"),
+            x=0.5,
+            xanchor='center'
+        )
     )
-)
+    fig_url.update_xaxes(tickangle=45)
+    st.plotly_chart(fig_url, use_container_width=True)
+else:
+    st.info("No hay información de URL disponible")
 
-fig_promedio.update_xaxes(tickangle=45)
-st.plotly_chart(fig_promedio, use_container_width=True)
+# Nota sobre CTR
+st.markdown("### 📈 Nota sobre Tasa de Clics (CTR)")
+st.info("""
+Para calcular la Tasa de Clics (CTR) necesitaríamos información sobre las impresiones (pageviews, views, etc.). 
+En los datos actuales solo tenemos información de clics, por lo que no podemos calcular el CTR directamente.
+""")
 
 # Mostrar tabla de eventos recientes
 st.subheader("📋 Primeros 100 eventos")
