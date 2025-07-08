@@ -178,7 +178,7 @@ except Exception as e:
     st.error(f"Error al leer el archivo: {e}")
     st.stop()
 
-# Estadísticas
+# Estadísticas generales
 usuarios_unicos = df["userUuid"].nunique()
 total_clics = len(df)
 promedio_clics = total_clics / usuarios_unicos if usuarios_unicos > 0 else 0
@@ -216,7 +216,91 @@ with col3:
 
 st.markdown("</div>", unsafe_allow_html=True)
 
+# Estadísticas por tipo de evento
+st.subheader("📊 Estadísticas por Tipo de Evento")
+
+# Calcular estadísticas por evento
+eventos_stats = df.groupby('event').agg({
+    'userUuid': ['count', 'nunique']
+}).round(2)
+
+# Renombrar columnas
+eventos_stats.columns = ['Total Clics', 'Usuarios Únicos']
+eventos_stats = eventos_stats.reset_index()
+
+# Calcular promedio de clics por usuario para cada evento
+eventos_stats['Promedio Clics por Usuario'] = (eventos_stats['Total Clics'] / eventos_stats['Usuarios Únicos']).round(2)
+
+# Ordenar por total de clics (descendente)
+eventos_stats = eventos_stats.sort_values('Total Clics', ascending=False)
+
+# Mostrar tabla de estadísticas por evento
+st.markdown("### Tabla de Estadísticas por Evento")
+st.dataframe(eventos_stats, use_container_width=True)
+
+# Gráfico de barras para los eventos más populares
+st.markdown("### 📈 Top 10 Eventos por Total de Clics")
+
+# Tomar los top 10 eventos
+top_10_eventos = eventos_stats.head(10)
+
+# Crear gráfico de barras
+import plotly.express as px
+
+fig = px.bar(
+    top_10_eventos,
+    x='event',
+    y='Total Clics',
+    title='Top 10 Eventos por Total de Clics',
+    color='Total Clics',
+    color_continuous_scale='Blues'
+)
+
+fig.update_layout(
+    xaxis_title="Tipo de Evento",
+    yaxis_title="Total de Clics",
+    plot_bgcolor='#eaefff',
+    paper_bgcolor='#eaefff',
+    font=dict(family="Inter", size=14, color="#333"),
+    title=dict(
+        font=dict(size=20, family="DM Sans", color="#0C1461"),
+        x=0.5,
+        xanchor='center'
+    )
+)
+
+fig.update_xaxes(tickangle=45)
+st.plotly_chart(fig, use_container_width=True)
+
+# Gráfico de promedio de clics por usuario
+st.markdown("### 📊 Promedio de Clics por Usuario (Top 10)")
+
+fig_promedio = px.bar(
+    top_10_eventos,
+    x='event',
+    y='Promedio Clics por Usuario',
+    title='Promedio de Clics por Usuario por Evento',
+    color='Promedio Clics por Usuario',
+    color_continuous_scale='Greens'
+)
+
+fig_promedio.update_layout(
+    xaxis_title="Tipo de Evento",
+    yaxis_title="Promedio de Clics por Usuario",
+    plot_bgcolor='#eaefff',
+    paper_bgcolor='#eaefff',
+    font=dict(family="Inter", size=14, color="#333"),
+    title=dict(
+        font=dict(size=20, family="DM Sans", color="#0C1461"),
+        x=0.5,
+        xanchor='center'
+    )
+)
+
+fig_promedio.update_xaxes(tickangle=45)
+st.plotly_chart(fig_promedio, use_container_width=True)
+
 # Mostrar tabla de eventos recientes
-st.subheader("Primeros 100 eventos")
+st.subheader("📋 Primeros 100 eventos")
 df_sample = df.head(100)
 st.dataframe(df_sample)
