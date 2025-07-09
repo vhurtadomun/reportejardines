@@ -171,10 +171,7 @@ encabezado_con_logo("Reporte Web - Jardines")
 
 # Intentar diferentes nombres de archivo
 csv_files = [
-    "inputs/mixpanel_applicants_merged.csv",
-    "inputs/mixpanel_applicants_mongo_merged.csv", 
-    "inputs/mixpanel_data.csv",
-    "inputs/mixpanel_no_match_applicants.csv"
+    "inputs/data_compilation.csv"
 ]
 
 df = None
@@ -183,7 +180,7 @@ csv_path = None
 for file_path in csv_files:
     try:
         # Leer columnas necesarias para estadísticas básicas
-        cols = ["event", "userUuid", "date", "$browser", "$os", "$device", "$current_url", "distinct_id"]
+        cols = ["event", "user", "date", "$browser", "$os", "$device", "$current_url", "distinct_id", "data_source"]
         df = pd.read_csv(file_path, usecols=lambda c: c in cols, low_memory=False)
         csv_path = file_path
         break
@@ -191,7 +188,7 @@ for file_path in csv_files:
         continue
 
 if df is None:
-    st.error("❌ No se pudo cargar ningún archivo CSV. Verifica que los archivos estén en la carpeta 'inputs'")
+    st.error("❌ No se pudo cargar el archivo data_compilation.csv. Verifica que el archivo esté en la carpeta 'inputs'")
     st.stop()
 
 # 🧮 ESTADÍSTICAS BÁSICAS
@@ -199,12 +196,12 @@ st.markdown("## 🧮 Estadísticas Básicas")
 
 # 1. Número total de clics
 total_clics = len(df)
-usuarios_unicos = df["userUuid"].nunique()
+usuarios_unicos = df["user"].nunique()
 
 # 2. Clics únicos vs. clics totales
 clics_unicos_vs_totales = {
     "Clics Totales": total_clics,
-    "Usuarios Únicos (userUuid)": usuarios_unicos,
+    "Usuarios Únicos (user)": usuarios_unicos,
     "Promedio Clics por Usuario": round(total_clics / usuarios_unicos, 2) if usuarios_unicos > 0 else 0
 }
 
@@ -235,11 +232,46 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
-# 3. Clics por sección o elemento (event)
+# 3. Estadísticas por fuente de datos
+st.markdown("### 📊 Distribución por Fuente de Datos")
+
+if 'data_source' in df.columns:
+    data_source_stats = df['data_source'].value_counts().reset_index()
+    data_source_stats.columns = ['Fuente de Datos', 'Total de Registros']
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### Conteo por Fuente de Datos")
+        st.dataframe(data_source_stats, use_container_width=True)
+    
+    with col2:
+        # Gráfico de fuentes de datos
+        fig_data_source = px.pie(
+            data_source_stats, 
+            values='Total de Registros', 
+            names='Fuente de Datos',
+            title='Distribución de Registros por Fuente de Datos'
+        )
+        fig_data_source.update_layout(
+            plot_bgcolor='#eaefff',
+            paper_bgcolor='#eaefff',
+            font=dict(family="Inter", size=14, color="#333"),
+            title=dict(
+                font=dict(size=20, family="DM Sans", color="#0C1461"),
+                x=0.5,
+                xanchor='center'
+            )
+        )
+        st.plotly_chart(fig_data_source, use_container_width=True)
+else:
+    st.info("No hay información de fuente de datos disponible")
+
+# 4. Clics por sección o elemento (event)
 st.markdown("### 📊 Clics por Sección/Elemento")
 
 eventos_stats = df.groupby('event').agg({
-    'userUuid': ['count', 'nunique']
+    'user': ['count', 'nunique']
 }).round(2)
 
 eventos_stats.columns = ['Total Clics', 'Usuarios Únicos']
