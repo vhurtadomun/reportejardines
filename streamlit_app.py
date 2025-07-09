@@ -199,6 +199,7 @@ for file_path in csv_files:
         
         break
     except Exception as e:
+        st.error(f"Error al leer {file_path}: {str(e)}")
         continue
 
 if df is None:
