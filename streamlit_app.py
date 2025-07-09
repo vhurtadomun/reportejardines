@@ -186,7 +186,6 @@ for file_path in csv_files:
         cols = ["event", "userUuid", "date", "$browser", "$os", "$device", "$current_url", "distinct_id"]
         df = pd.read_csv(file_path, usecols=lambda c: c in cols, low_memory=False)
         csv_path = file_path
-        st.success(f"✅ Archivo cargado exitosamente: {file_path}")
         break
     except Exception as e:
         continue
@@ -201,18 +200,16 @@ st.markdown("## 🧮 Estadísticas Básicas")
 # 1. Número total de clics
 total_clics = len(df)
 usuarios_unicos = df["userUuid"].nunique()
-distinct_ids_unicos = df["distinct_id"].nunique()
 
 # 2. Clics únicos vs. clics totales
 clics_unicos_vs_totales = {
     "Clics Totales": total_clics,
     "Usuarios Únicos (userUuid)": usuarios_unicos,
-    "Usuarios Únicos (distinct_id)": distinct_ids_unicos,
     "Promedio Clics por Usuario": round(total_clics / usuarios_unicos, 2) if usuarios_unicos > 0 else 0
 }
 
 # Mostrar KPIs básicos
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown(f"""
@@ -231,14 +228,6 @@ with col2:
     """, unsafe_allow_html=True)
 
 with col3:
-    st.markdown(f"""
-    <div class="kpi">
-        <h2>{distinct_ids_unicos:,}</h2>
-        <p>Distinct IDs Únicos</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col4:
     st.markdown(f"""
     <div class="kpi">
         <h2>{clics_unicos_vs_totales['Promedio Clics por Usuario']}</h2>
