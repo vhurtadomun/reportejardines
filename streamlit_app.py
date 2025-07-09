@@ -167,10 +167,9 @@ def encabezado_con_logo(titulo):
     """, unsafe_allow_html=True)
 
 # Encabezado
-encabezado_con_logo("Reporte de Clics - Mixpanel")
+encabezado_con_logo("Reporte Web - Jardines")
 
-csv_path = "inputs/mixpanel_applicants_merged_20250708_100107.csv"
-
+csv_path = "inputs/mixpanel_applicants_mongo_merged.csv"
 # Leer columnas necesarias para estadísticas básicas
 cols = ["event", "userUuid", "date", "$browser", "$os", "$device", "$current_url", "distinct_id"]
 try:
