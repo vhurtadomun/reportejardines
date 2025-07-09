@@ -179,10 +179,24 @@ csv_path = None
 
 for file_path in csv_files:
     try:
-        # Leer columnas necesarias para estadísticas básicas
-        cols = ["event", "user", "date", "$browser", "$os", "$device", "$current_url", "distinct_id", "data_source"]
-        df = pd.read_csv(file_path, usecols=lambda c: c in cols, low_memory=False)
+        # Primero leer el archivo completo para ver qué columnas están disponibles
+        df_temp = pd.read_csv(file_path, nrows=1)
+        available_columns = df_temp.columns.tolist()
+        
+        # Definir columnas que queremos leer
+        desired_columns = ["event", "user", "date", "$browser", "$os", "$device", "$current_url", "distinct_id", "data_source"]
+        
+        # Solo leer las columnas que existen
+        cols_to_read = [col for col in desired_columns if col in available_columns]
+        
+        # Leer el archivo con las columnas disponibles
+        df = pd.read_csv(file_path, usecols=cols_to_read, low_memory=False)
         csv_path = file_path
+        
+        # Mostrar información sobre las columnas disponibles
+        st.info(f"Columnas disponibles: {', '.join(available_columns)}")
+        st.info(f"Columnas utilizadas: {', '.join(cols_to_read)}")
+        
         break
     except Exception as e:
         continue
@@ -196,12 +210,26 @@ st.markdown("## 🧮 Estadísticas Básicas")
 
 # 1. Número total de clics
 total_clics = len(df)
-usuarios_unicos = df["user"].nunique()
+
+# Verificar qué columnas de usuario están disponibles
+user_column = None
+if 'user' in df.columns:
+    user_column = 'user'
+elif 'userUuid' in df.columns:
+    user_column = 'userUuid'
+elif 'distinct_id' in df.columns:
+    user_column = 'distinct_id'
+
+if user_column:
+    usuarios_unicos = df[user_column].nunique()
+else:
+    usuarios_unicos = 0
+    st.warning("⚠️ No se encontró columna de usuario. Usando 0 como valor por defecto.")
 
 # 2. Clics únicos vs. clics totales
 clics_unicos_vs_totales = {
     "Clics Totales": total_clics,
-    "Usuarios Únicos (user)": usuarios_unicos,
+    "Usuarios Únicos": usuarios_unicos,
     "Promedio Clics por Usuario": round(total_clics / usuarios_unicos, 2) if usuarios_unicos > 0 else 0
 }
 
@@ -270,18 +298,21 @@ else:
 # 4. Clics por sección o elemento (event)
 st.markdown("### 📊 Clics por Sección/Elemento")
 
-eventos_stats = df.groupby('event').agg({
-    'user': ['count', 'nunique']
-}).round(2)
+if 'event' in df.columns and user_column:
+    eventos_stats = df.groupby('event').agg({
+        user_column: ['count', 'nunique']
+    }).round(2)
 
-eventos_stats.columns = ['Total Clics', 'Usuarios Únicos']
-eventos_stats = eventos_stats.reset_index()
-eventos_stats['Promedio Clics por Usuario'] = (eventos_stats['Total Clics'] / eventos_stats['Usuarios Únicos']).round(2)
-eventos_stats = eventos_stats.sort_values('Total Clics', ascending=False)
+    eventos_stats.columns = ['Total Clics', 'Usuarios Únicos']
+    eventos_stats = eventos_stats.reset_index()
+    eventos_stats['Promedio Clics por Usuario'] = (eventos_stats['Total Clics'] / eventos_stats['Usuarios Únicos']).round(2)
+    eventos_stats = eventos_stats.sort_values('Total Clics', ascending=False)
 
-# Mostrar top 10 eventos
-st.markdown("#### Top 10 Eventos por Total de Clics")
-st.dataframe(eventos_stats.head(10), use_container_width=True)
+    # Mostrar top 10 eventos
+    st.markdown("#### Top 10 Eventos por Total de Clics")
+    st.dataframe(eventos_stats.head(10), use_container_width=True)
+else:
+    st.info("No hay información de eventos o usuarios disponible")
 
 # 4. Clics por tipo de dispositivo
 st.markdown("### 📱 Clics por Tipo de Dispositivo")
