@@ -169,13 +169,30 @@ def encabezado_con_logo(titulo):
 # Encabezado
 encabezado_con_logo("Reporte Web - Jardines")
 
-csv_path = "inputs/mixpanel_applicants_mongo_merged.csv"
-# Leer columnas necesarias para estadísticas básicas
-cols = ["event", "userUuid", "date", "$browser", "$os", "$device", "$current_url", "distinct_id"]
-try:
-    df = pd.read_csv(csv_path, usecols=lambda c: c in cols, low_memory=False)
-except Exception as e:
-    st.error(f"Error al leer el archivo: {e}")
+# Intentar diferentes nombres de archivo
+csv_files = [
+    "inputs/mixpanel_applicants_merged.csv",
+    "inputs/mixpanel_applicants_mongo_merged.csv", 
+    "inputs/mixpanel_data.csv",
+    "inputs/mixpanel_no_match_applicants.csv"
+]
+
+df = None
+csv_path = None
+
+for file_path in csv_files:
+    try:
+        # Leer columnas necesarias para estadísticas básicas
+        cols = ["event", "userUuid", "date", "$browser", "$os", "$device", "$current_url", "distinct_id"]
+        df = pd.read_csv(file_path, usecols=lambda c: c in cols, low_memory=False)
+        csv_path = file_path
+        st.success(f"✅ Archivo cargado exitosamente: {file_path}")
+        break
+    except Exception as e:
+        continue
+
+if df is None:
+    st.error("❌ No se pudo cargar ningún archivo CSV. Verifica que los archivos estén en la carpeta 'inputs'")
     st.stop()
 
 # 🧮 ESTADÍSTICAS BÁSICAS
