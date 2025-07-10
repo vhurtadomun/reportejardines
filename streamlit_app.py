@@ -172,8 +172,127 @@ def encabezado_con_logo(titulo):
 # Encabezado
 encabezado_con_logo("Dashboard Completo - Jardines")
 
+# Función para cargar datos
+def load_data():
+    data = {}
+    
+    # Archivos de resumen de usuarios
+    user_summary_files = {
+        "MongoDB": "inputs/mongo_user_summary.csv",
+        "PostgreSQL": "inputs/postgres_user_summary.csv", 
+        "Mixpanel": "inputs/mixpanel_user_summary.csv"
+    }
+    
+    # Archivos de eventos por usuario
+    user_event_files = {
+        "MongoDB": "inputs/mongo_user_event_summary.csv",
+        "PostgreSQL": "inputs/postgres_user_event_summary.csv", 
+        "Mixpanel": "inputs/mixpanel_user_event_summary.csv"
+    }
+    
+    # Archivos de actividad diaria
+    daily_activity_files = {
+        "MongoDB": "inputs/mongo_daily_activity_summary.csv",
+        "PostgreSQL": "inputs/postgres_daily_activity_summary.csv", 
+        "Mixpanel": "inputs/mixpanel_ daily_activity_summary.csv"
+    }
+    
+    # Archivos de resumen de eventos
+    event_summary_files = {
+        "MongoDB": "inputs/mongo_event_summary.csv",
+        "PostgreSQL": "inputs/postgres_event_summary.csv", 
+        "Mixpanel": "inputs/mixpanel_event_summary.csv"
+    }
+    
+    # Archivos filtrados por aplicantes
+    applicant_files = {
+        "MongoDB": "inputs/mongo_filtered_by_applicants.csv",
+        "PostgreSQL": "inputs/postgres_filtered_by_applicants.csv", 
+        "Mixpanel": "inputs/mixpanel_filtered_by_applicants.csv"
+    }
+    
+    # Cargar todos los archivos
+    for source, file_path in user_summary_files.items():
+        try:
+            df = pd.read_csv(file_path)
+            df['data_source'] = source
+            data[f"{source}_user_summary"] = df
+        except Exception as e:
+            st.error(f"❌ Error cargando {source} user_summary: {str(e)}")
+    
+    for source, file_path in user_event_files.items():
+        try:
+            df = pd.read_csv(file_path)
+            df['data_source'] = source
+            data[f"{source}_user_events"] = df
+        except Exception as e:
+            st.error(f"❌ Error cargando {source} user_events: {str(e)}")
+    
+    for source, file_path in daily_activity_files.items():
+        try:
+            df = pd.read_csv(file_path)
+            df['data_source'] = source
+            data[f"{source}_daily"] = df
+        except Exception as e:
+            st.error(f"❌ Error cargando {source} daily_activity: {str(e)}")
+    
+    for source, file_path in event_summary_files.items():
+        try:
+            df = pd.read_csv(file_path)
+            df['data_source'] = source
+            data[f"{source}_events"] = df
+        except Exception as e:
+            st.error(f"❌ Error cargando {source} event_summary: {str(e)}")
+    
+    for source, file_path in applicant_files.items():
+        try:
+            df = pd.read_csv(file_path)
+            df['data_source'] = source
+            data[f"{source}_applicants"] = df
+        except Exception as e:
+            st.error(f"❌ Error cargando {source} applicants: {str(e)}")
+    
+    return data
+
+# Función para encontrar el evento más frecuente por usuario
+def get_top_event_per_user(df, user_col='user', email_col='email'):
+    """Encuentra el evento más frecuente para cada usuario"""
+    event_columns = [col for col in df.columns if col not in [user_col, email_col, 'applicant_id', 'data_source']]
+    
+    if not event_columns:
+        return pd.DataFrame()
+    
+    results = []
+    for _, row in df.iterrows():
+        user = row[user_col]
+        email = row[email_col]
+        data_source = row.get('data_source', 'Unknown')
+        
+        # Encontrar el evento con mayor valor
+        event_counts = {col: row[col] for col in event_columns if pd.notna(row[col]) and row[col] > 0}
+        
+        if event_counts:
+            top_event = max(event_counts.items(), key=lambda x: x[1])
+            results.append({
+                'user': user,
+                'email': email,
+                'data_source': data_source,
+                'top_event': top_event[0],
+                'event_count': top_event[1],
+                'total_events': sum(event_counts.values())
+            })
+    
+    return pd.DataFrame(results)
+
+# Cargar datos
+data = load_data()
+
+if not data:
+    st.error("❌ No se pudieron cargar los archivos")
+    st.stop()
+
 # 6. RESUMEN GENERAL
-st.markdown("## 📋 Resumen General")
+st.markdown("## �� Resumen General")
 
 # Calcular estadísticas específicas por fuente
 total_users_postgres = 0
