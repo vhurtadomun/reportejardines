@@ -292,7 +292,7 @@ if not data:
     st.stop()
 
 # 6. RESUMEN GENERAL
-st.markdown("## �� Resumen General")
+st.markdown("Resumen General")
 
 # Calcular estadísticas específicas por fuente
 total_users_postgres = 0
