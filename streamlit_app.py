@@ -4,8 +4,8 @@ import plotly.express as px
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Reporte Mixpanel",
-    page_icon="📊",
+    page_title="Reporte Usuarios - Jardines",
+    page_icon="👥",
     layout="wide"
 )
 
@@ -167,232 +167,96 @@ def encabezado_con_logo(titulo):
     """, unsafe_allow_html=True)
 
 # Encabezado
-encabezado_con_logo("Reporte Web - Jardines")
+encabezado_con_logo("Reporte de Usuarios - Jardines")
 
-# Intentar diferentes nombres de archivo
-csv_files = [
-    "inputs/data_compilation.csv"
-]
-
-df = None
-csv_path = None
-
-for file_path in csv_files:
-    try:
-        # Primero leer el archivo completo para ver qué columnas están disponibles
-        df_temp = pd.read_csv(file_path, nrows=1)
-        available_columns = df_temp.columns.tolist()
-        
-        # Definir columnas que queremos leer
-        desired_columns = ["event", "user", "date", "$browser", "$os", "$device", "$current_url", "distinct_id", "data_source"]
-        
-        # Solo leer las columnas que existen
-        cols_to_read = [col for col in desired_columns if col in available_columns]
-        
-        # Leer el archivo con las columnas disponibles
-        df = pd.read_csv(file_path, usecols=cols_to_read, low_memory=False)
-        csv_path = file_path
-        
-        # Mostrar información sobre las columnas disponibles
-        st.info(f"Columnas disponibles: {', '.join(available_columns)}")
-        st.info(f"Columnas utilizadas: {', '.join(cols_to_read)}")
-        
-        break
-    except Exception as e:
-        st.error(f"Error al leer {file_path}: {str(e)}")
-        continue
-
-if df is None:
-    st.error("❌ No se pudo cargar el archivo data_compilation.csv. Verifica que el archivo esté en la carpeta 'inputs'")
-    st.stop()
-
-# 🧮 ESTADÍSTICAS BÁSICAS
-st.markdown("## 🧮 Estadísticas Básicas")
-
-# 1. Número total de clics
-total_clics = len(df)
-
-# Verificar qué columnas de usuario están disponibles
-user_column = None
-if 'user' in df.columns:
-    user_column = 'user'
-elif 'userUuid' in df.columns:
-    user_column = 'userUuid'
-elif 'distinct_id' in df.columns:
-    user_column = 'distinct_id'
-
-if user_column:
-    usuarios_unicos = df[user_column].nunique()
-else:
-    usuarios_unicos = 0
-    st.warning("⚠️ No se encontró columna de usuario. Usando 0 como valor por defecto.")
-
-# 2. Clics únicos vs. clics totales
-clics_unicos_vs_totales = {
-    "Clics Totales": total_clics,
-    "Usuarios Únicos": usuarios_unicos,
-    "Promedio Clics por Usuario": round(total_clics / usuarios_unicos, 2) if usuarios_unicos > 0 else 0
+# Cargar datos de usuarios por fuente
+user_files = {
+    "MongoDB": "inputs/mongo_user_summary.csv",
+    "PostgreSQL": "inputs/postgres_user_summary.csv", 
+    "Mixpanel": "inputs/mixpanel_user_summary.csv"
 }
 
+dfs = {}
+for source, file_path in user_files.items():
+    try:
+        df = pd.read_csv(file_path)
+        df['data_source'] = source
+        dfs[source] = df
+        st.success(f"✅ {source}: {len(df)} usuarios cargados")
+    except Exception as e:
+        st.error(f"❌ Error cargando {source}: {str(e)}")
+
+if not dfs:
+    st.error("❌ No se pudieron cargar los archivos de usuarios")
+    st.stop()
+
+# Combinar todos los DataFrames
+all_users = pd.concat(dfs.values(), ignore_index=True)
+
+# 👥 ESTADÍSTICAS A NIVEL DE USUARIOS
+st.markdown("## 👥 Estadísticas a Nivel de Usuarios")
+
+# 1. KPIs principales
+total_usuarios = len(all_users)
+usuarios_por_fuente = all_users['data_source'].value_counts()
+promedio_eventos = all_users['total_events'].mean()
+promedio_eventos_unicos = all_users['unique_event_count'].mean()
+
 # Mostrar KPIs básicos
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(f"""
     <div class="kpi">
-        <h2>{total_clics:,}</h2>
-        <p>Total de Clics</p>
+        <h2>{total_usuarios:,}</h2>
+        <p>Total de Usuarios</p>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown(f"""
     <div class="kpi">
-        <h2>{usuarios_unicos:,}</h2>
-        <p>Usuarios Únicos</p>
+        <h2>{promedio_eventos:.1f}</h2>
+        <p>Promedio Eventos/Usuario</p>
     </div>
     """, unsafe_allow_html=True)
 
 with col3:
     st.markdown(f"""
     <div class="kpi">
-        <h2>{clics_unicos_vs_totales['Promedio Clics por Usuario']}</h2>
-        <p>Promedio Clics/Usuario</p>
+        <h2>{promedio_eventos_unicos:.1f}</h2>
+        <p>Promedio Eventos Únicos/Usuario</p>
     </div>
     """, unsafe_allow_html=True)
 
-# 3. Estadísticas por fuente de datos
-st.markdown("### 📊 Distribución por Fuente de Datos")
+with col4:
+    st.markdown(f"""
+    <div class="kpi">
+        <h2>{len(all_users['user'].unique()):,}</h2>
+        <p>Usuarios Únicos</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-if 'data_source' in df.columns:
-    data_source_stats = df['data_source'].value_counts().reset_index()
-    data_source_stats.columns = ['Fuente de Datos', 'Total de Registros']
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### Conteo por Fuente de Datos")
-        st.dataframe(data_source_stats, use_container_width=True)
-    
-    with col2:
-        # Gráfico de fuentes de datos
-        fig_data_source = px.pie(
-            data_source_stats, 
-            values='Total de Registros', 
-            names='Fuente de Datos',
-            title='Distribución de Registros por Fuente de Datos'
-        )
-        fig_data_source.update_layout(
-            plot_bgcolor='#eaefff',
-            paper_bgcolor='#eaefff',
-            font=dict(family="Inter", size=14, color="#333"),
-            title=dict(
-                font=dict(size=20, family="DM Sans", color="#0C1461"),
-                x=0.5,
-                xanchor='center'
-            )
-        )
-        st.plotly_chart(fig_data_source, use_container_width=True)
-else:
-    st.info("No hay información de fuente de datos disponible")
-
-# 4. Clics por sección o elemento (event)
-st.markdown("### 📊 Clics por Sección/Elemento")
-
-if 'event' in df.columns and user_column:
-    eventos_stats = df.groupby('event').agg({
-        user_column: ['count', 'nunique']
-    }).round(2)
-
-    eventos_stats.columns = ['Total Clics', 'Usuarios Únicos']
-    eventos_stats = eventos_stats.reset_index()
-    eventos_stats['Promedio Clics por Usuario'] = (eventos_stats['Total Clics'] / eventos_stats['Usuarios Únicos']).round(2)
-    eventos_stats = eventos_stats.sort_values('Total Clics', ascending=False)
-
-    # Mostrar top 10 eventos
-    st.markdown("#### Top 10 Eventos por Total de Clics")
-    st.dataframe(eventos_stats.head(10), use_container_width=True)
-else:
-    st.info("No hay información de eventos o usuarios disponible")
-
-# 4. Clics por tipo de dispositivo
-st.markdown("### 📱 Clics por Tipo de Dispositivo")
-
-if '$device' in df.columns:
-    device_stats = df['$device'].value_counts().reset_index()
-    device_stats.columns = ['Dispositivo', 'Total Clics']
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### Distribución por Dispositivo")
-        st.dataframe(device_stats, use_container_width=True)
-    
-    with col2:
-        # Gráfico de dispositivos
-        fig_device = px.pie(
-            device_stats, 
-            values='Total Clics', 
-            names='Dispositivo',
-            title='Distribución de Clics por Dispositivo'
-        )
-        fig_device.update_layout(
-            plot_bgcolor='#eaefff',
-            paper_bgcolor='#eaefff',
-            font=dict(family="Inter", size=14, color="#333"),
-            title=dict(
-                font=dict(size=20, family="DM Sans", color="#0C1461"),
-                x=0.5,
-                xanchor='center'
-            )
-        )
-        st.plotly_chart(fig_device, use_container_width=True)
-else:
-    st.info("No hay información de dispositivo disponible en los datos")
-
-# 5. Clics por navegador / sistema operativo
-st.markdown("### 🌐 Clics por Navegador y Sistema Operativo")
+# 2. Distribución de usuarios por fuente de datos
+st.markdown("### 📊 Distribución de Usuarios por Fuente de Datos")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    if '$browser' in df.columns:
-        browser_stats = df['$browser'].value_counts().reset_index()
-        browser_stats.columns = ['Navegador', 'Total Clics']
-        st.markdown("#### Distribución por Navegador")
-        st.dataframe(browser_stats, use_container_width=True)
-    else:
-        st.info("No hay información de navegador disponible")
+    st.markdown("#### Usuarios por Fuente de Datos")
+    source_stats = all_users['data_source'].value_counts().reset_index()
+    source_stats.columns = ['Fuente de Datos', 'Total de Usuarios']
+    st.dataframe(source_stats, use_container_width=True)
 
 with col2:
-    if '$os' in df.columns:
-        os_stats = df['$os'].value_counts().reset_index()
-        os_stats.columns = ['Sistema Operativo', 'Total Clics']
-        st.markdown("#### Distribución por Sistema Operativo")
-        st.dataframe(os_stats, use_container_width=True)
-    else:
-        st.info("No hay información de sistema operativo disponible")
-
-# 6. Clics por URL (sección/elemento)
-st.markdown("### 🔗 Clics por URL")
-
-if '$current_url' in df.columns:
-    url_stats = df['$current_url'].value_counts().reset_index()
-    url_stats.columns = ['URL', 'Total Clics']
-    
-    st.markdown("#### Top 10 URLs por Clics")
-    st.dataframe(url_stats.head(10), use_container_width=True)
-    
-    # Gráfico de URLs
-    fig_url = px.bar(
-        url_stats.head(10),
-        x='URL',
-        y='Total Clics',
-        title='Top 10 URLs por Total de Clics'
+    # Gráfico de fuentes de datos
+    fig_source = px.pie(
+        source_stats, 
+        values='Total de Usuarios', 
+        names='Fuente de Datos',
+        title='Distribución de Usuarios por Fuente de Datos'
     )
-    fig_url.update_layout(
-        xaxis_title="URL",
-        yaxis_title="Total de Clics",
+    fig_source.update_layout(
         plot_bgcolor='#eaefff',
         paper_bgcolor='#eaefff',
         font=dict(family="Inter", size=14, color="#333"),
@@ -402,19 +266,116 @@ if '$current_url' in df.columns:
             xanchor='center'
         )
     )
-    fig_url.update_xaxes(tickangle=45)
-    st.plotly_chart(fig_url, use_container_width=True)
-else:
-    st.info("No hay información de URL disponible")
+    st.plotly_chart(fig_source, use_container_width=True)
 
-# Nota sobre CTR
-st.markdown("### 📈 Nota sobre Tasa de Clics (CTR)")
-st.info("""
-Para calcular la Tasa de Clics (CTR) necesitaríamos información sobre las impresiones (pageviews, views, etc.). 
-En los datos actuales solo tenemos información de clics, por lo que no podemos calcular el CTR directamente.
+# 3. Análisis de actividad de usuarios
+st.markdown("### 📈 Análisis de Actividad de Usuarios")
+
+# Top 10 usuarios más activos
+st.markdown("#### Top 10 Usuarios Más Activos")
+top_active_users = all_users.nlargest(10, 'total_events')[['user', 'email', 'data_source', 'total_events', 'unique_event_count']]
+st.dataframe(top_active_users, use_container_width=True)
+
+# Gráfico de distribución de eventos por usuario
+fig_events_dist = px.histogram(
+    all_users,
+    x='total_events',
+    nbins=20,
+    title='Distribución de Total de Eventos por Usuario',
+    labels={'total_events': 'Total de Eventos', 'count': 'Número de Usuarios'}
+)
+fig_events_dist.update_layout(
+    plot_bgcolor='#eaefff',
+    paper_bgcolor='#eaefff',
+    font=dict(family="Inter", size=14, color="#333"),
+    title=dict(
+        font=dict(size=20, family="DM Sans", color="#0C1461"),
+        x=0.5,
+        xanchor='center'
+    )
+)
+st.plotly_chart(fig_events_dist, use_container_width=True)
+
+# 4. Comparación entre fuentes de datos
+st.markdown("### 🔄 Comparación entre Fuentes de Datos")
+
+# Estadísticas por fuente
+source_comparison = all_users.groupby('data_source').agg({
+    'total_events': ['mean', 'median', 'max'],
+    'unique_event_count': ['mean', 'median', 'max'],
+    'user': 'count'
+}).round(2)
+
+source_comparison.columns = ['Promedio Eventos', 'Mediana Eventos', 'Máx Eventos', 
+                           'Promedio Eventos Únicos', 'Mediana Eventos Únicos', 'Máx Eventos Únicos', 'Total Usuarios']
+source_comparison = source_comparison.reset_index()
+
+st.markdown("#### Estadísticas Comparativas por Fuente")
+st.dataframe(source_comparison, use_container_width=True)
+
+# Gráfico de comparación
+fig_comparison = px.bar(
+    source_comparison,
+    x='data_source',
+    y=['Promedio Eventos', 'Promedio Eventos Únicos'],
+    title='Comparación de Promedio de Eventos por Fuente',
+    barmode='group'
+)
+fig_comparison.update_layout(
+    plot_bgcolor='#eaefff',
+    paper_bgcolor='#eaefff',
+    font=dict(family="Inter", size=14, color="#333"),
+    title=dict(
+        font=dict(size=20, family="DM Sans", color="#0C1461"),
+        x=0.5,
+        xanchor='center'
+    )
+)
+st.plotly_chart(fig_comparison, use_container_width=True)
+
+# 5. Análisis temporal de actividad
+st.markdown("### ⏰ Análisis Temporal de Actividad")
+
+# Convertir fechas
+all_users['first_activity'] = pd.to_datetime(all_users['first_activity'])
+all_users['last_activity'] = pd.to_datetime(all_users['last_activity'])
+
+# Calcular duración de sesión
+all_users['session_duration'] = (all_users['last_activity'] - all_users['first_activity']).dt.total_seconds() / 3600  # en horas
+
+# Top 10 sesiones más largas
+st.markdown("#### Top 10 Sesiones Más Largas (horas)")
+top_sessions = all_users.nlargest(10, 'session_duration')[['user', 'email', 'data_source', 'session_duration', 'total_events']]
+top_sessions['session_duration'] = top_sessions['session_duration'].round(2)
+st.dataframe(top_sessions, use_container_width=True)
+
+# Gráfico de duración de sesiones
+fig_sessions = px.histogram(
+    all_users[all_users['session_duration'] > 0],
+    x='session_duration',
+    nbins=20,
+    title='Distribución de Duración de Sesiones (horas)',
+    labels={'session_duration': 'Duración (horas)', 'count': 'Número de Usuarios'}
+)
+fig_sessions.update_layout(
+    plot_bgcolor='#eaefff',
+    paper_bgcolor='#eaefff',
+    font=dict(family="Inter", size=14, color="#333"),
+    title=dict(
+        font=dict(size=20, family="DM Sans", color="#0C1461"),
+        x=0.5,
+        xanchor='center'
+    )
+)
+st.plotly_chart(fig_sessions, use_container_width=True)
+
+# 6. Resumen de datos
+st.markdown("### 📋 Resumen de Datos")
+st.markdown(f"""
+- **Total de usuarios analizados**: {total_usuarios:,}
+- **Usuarios únicos**: {len(all_users['user'].unique()):,}
+- **Promedio de eventos por usuario**: {promedio_eventos:.1f}
+- **Promedio de eventos únicos por usuario**: {promedio_eventos_unicos:.1f}
+- **Usuario más activo**: {all_users.loc[all_users['total_events'].idxmax(), 'email']} ({all_users['total_events'].max()} eventos)
+- **Sesión más larga**: {all_users['session_duration'].max():.2f} horas
 """)
-
-# Mostrar tabla de eventos recientes
-st.subheader("📋 Primeros 100 eventos")
-df_sample = df.head(100)
-st.dataframe(df_sample)
