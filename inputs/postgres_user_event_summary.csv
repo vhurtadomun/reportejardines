@@ -1,6 +1,7 @@
-user,email,applicant_id,favorite_school_from_listFavorites
-0bd78f32-da5e-4ea0-88ea-8219d4b7a6ab,users_production_jardines3152@yopmail.com,233728,4
-10dfb0f5-d0ea-44db-9a77-6f35c8553616,users_production_jardines3168@yopmail.com,233744,4
-2465a1f2-8ea3-4f73-a265-edf18e0336a4,users_production_jardines3151@yopmail.com,233727,4
-447f60da-ccc5-438e-ab15-fd6ce67332fc,users_production_jardines3158@yopmail.com,233734,1
-e398f768-21f1-4928-ade9-7522837a6b48,users_production_jardines3157@yopmail.com,233733,2
+user,email,applicant_id,click_campus_card,click_campus_pin,favorite_school_from_listFavorites
+060ddb14-6c67-4fd6-9147-bc3122ee89a3,users_produccion_jardines3357@yopmail.com,237476,0,46,45
+19a9154a-7acf-48f7-92f5-808171e3e01b,users_produccion_jardines2227@yopmail.com,236346,0,40,62
+217bd927-48f9-49f0-a3b9-00b29f0dd049,users_produccion_jardines2481@yopmail.com,236600,9,57,55
+5c678dac-e04b-446b-848a-ebd82c855076,users_produccion_jardines2634@yopmail.com,236753,10,52,52
+c39d983a-e9bb-4ead-8097-cf9b3077ecb4,users_produccion_jardines2480@yopmail.com,236599,0,30,29
+e9700a84-ec45-4398-ace2-de0359c87166,users_produccion_jardines691@yopmail.com,234810,11,51,49

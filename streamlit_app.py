@@ -294,25 +294,24 @@ def get_top_event_per_user(df, user_col='user', email_col='email'):
 # 1. ANÁLISIS DE EVENTOS POR USUARIO
 st.markdown("## 🎯 Análisis de Eventos por Usuario")
 
-# Combinar todos los archivos de eventos por usuario
-all_user_events = []
+# Solo usar datos de Mixpanel para la tabla principal
+mixpanel_user_events = None
 for key, df in data.items():
-    if 'user_events' in key:
-        all_user_events.append(df)
+    if 'Mixpanel_user_events' in key:
+        mixpanel_user_events = df
+        break
 
-if all_user_events:
-    combined_user_events = pd.concat(all_user_events, ignore_index=True)
-    
-    # Mostrar tabla de usuarios vs eventos
-    st.markdown("### 📊 Tabla de Usuarios y Eventos")
+if mixpanel_user_events is not None:
+    # Mostrar tabla de usuarios vs eventos (solo Mixpanel)
+    st.markdown("### 📊 Tabla de Usuarios y Eventos (Mixpanel)")
     
     # Obtener columnas de eventos (excluir columnas de identificación)
-    event_columns = [col for col in combined_user_events.columns 
+    event_columns = [col for col in mixpanel_user_events.columns 
                     if col not in ['user', 'email', 'applicant_id', 'data_source']]
     
     if event_columns:
-        # Crear tabla pivotada con usuarios como filas y eventos como columnas
-        user_event_table = combined_user_events[['user', 'email', 'data_source'] + event_columns].copy()
+        # Crear tabla con usuarios como filas y eventos como columnas
+        user_event_table = mixpanel_user_events[['user', 'email', 'data_source'] + event_columns].copy()
         
         # Mostrar la tabla
         st.markdown("#### Conteo de Eventos por Usuario")
@@ -330,7 +329,7 @@ if all_user_events:
             x=event_totals.values,
             y=event_totals.index,
             orientation='h',
-            title='Total de Eventos por Tipo',
+            title='Total de Eventos por Tipo (Mixpanel)',
             labels={'x': 'Total de Eventos', 'y': 'Tipo de Evento'}
         )
         fig_top_events.update_layout(
@@ -345,11 +344,11 @@ if all_user_events:
         )
         st.plotly_chart(fig_top_events, use_container_width=True)
     
-    # Encontrar el evento más frecuente por usuario
-    top_events_df = get_top_event_per_user(combined_user_events)
+    # Encontrar el evento más frecuente por usuario (solo Mixpanel)
+    top_events_df = get_top_event_per_user(mixpanel_user_events)
     
     if not top_events_df.empty:
-        st.markdown("### 📈 Evento Más Frecuente por Usuario")
+        st.markdown("### 📈 Evento Más Frecuente por Usuario (Mixpanel)")
         
         col1, col2 = st.columns(2)
         
@@ -365,7 +364,7 @@ if all_user_events:
                 x=event_counts.values,
                 y=event_counts.index,
                 orientation='h',
-                title='Top 10 Eventos Más Frecuentes',
+                title='Top 10 Eventos Más Frecuentes (Mixpanel)',
                 labels={'x': 'Número de Usuarios', 'y': 'Evento'}
             )
             fig_top_events.update_layout(
@@ -380,8 +379,8 @@ if all_user_events:
             )
             st.plotly_chart(fig_top_events, use_container_width=True)
         
-        # Análisis por fuente de datos
-        st.markdown("### 🔄 Análisis por Fuente de Datos")
+        # Análisis por fuente de datos (solo Mixpanel)
+        st.markdown("### 🔄 Análisis de Mixpanel")
         
         source_analysis = top_events_df.groupby('data_source').agg({
             'event_count': ['mean', 'max', 'sum'],
@@ -398,42 +397,45 @@ if all_user_events:
 # 2. COMPARACIÓN ENTRE FUENTES DE DATOS
 st.markdown("## 🔄 Comparación entre Fuentes de Datos")
 
-# Combinar todos los resúmenes de usuarios
-all_user_summaries = []
+# Solo usar datos de PostgreSQL para la segunda tabla
+postgres_user_events = None
 for key, df in data.items():
-    if 'user_summary' in key:
-        all_user_summaries.append(df)
+    if 'PostgreSQL_user_events' in key:
+        postgres_user_events = df
+        break
 
-if all_user_summaries:
-    combined_user_summary = pd.concat(all_user_summaries, ignore_index=True)
+if postgres_user_events is not None:
+    # Mostrar tabla de usuarios vs eventos (solo PostgreSQL)
+    st.markdown("### 📊 Tabla de Usuarios y Eventos (PostgreSQL)")
     
-    # KPIs por fuente
-    source_kpis = combined_user_summary.groupby('data_source').agg({
-        'total_events': ['sum', 'mean', 'max'],
-        'unique_event_count': ['mean', 'max'],
-        'user': 'count'
-    }).round(2)
+    # Obtener columnas de eventos (excluir columnas de identificación)
+    event_columns = [col for col in postgres_user_events.columns 
+                    if col not in ['user', 'email', 'applicant_id', 'data_source']]
     
-    source_kpis.columns = ['Total Eventos', 'Promedio Eventos', 'Máx Eventos', 
-                          'Promedio Eventos Únicos', 'Máx Eventos Únicos', 'Total Usuarios']
-    source_kpis = source_kpis.reset_index()
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### Estadísticas por Fuente de Datos")
-        st.dataframe(source_kpis, use_container_width=True)
-    
-    with col2:
-        # Gráfico de comparación
-        fig_comparison = px.bar(
-            source_kpis,
-            x='data_source',
-            y=['Promedio Eventos', 'Promedio Eventos Únicos'],
-            title='Comparación de Promedio de Eventos por Fuente',
-            barmode='group'
+    if event_columns:
+        # Crear tabla con usuarios como filas y eventos como columnas
+        user_event_table = postgres_user_events[['user', 'email', 'data_source'] + event_columns].copy()
+        
+        # Mostrar la tabla
+        st.markdown("#### Conteo de Eventos por Usuario")
+        st.dataframe(user_event_table, use_container_width=True)
+        
+        # Mostrar estadísticas de eventos
+        st.markdown("#### Estadísticas de Eventos")
+        event_stats = user_event_table[event_columns].describe().round(2)
+        st.dataframe(event_stats, use_container_width=True)
+        
+        # Gráfico de eventos más frecuentes
+        st.markdown("#### Eventos Más Frecuentes")
+        event_totals = user_event_table[event_columns].sum().sort_values(ascending=False)
+        fig_top_events = px.bar(
+            x=event_totals.values,
+            y=event_totals.index,
+            orientation='h',
+            title='Total de Eventos por Tipo (PostgreSQL)',
+            labels={'x': 'Total de Eventos', 'y': 'Tipo de Evento'}
         )
-        fig_comparison.update_layout(
+        fig_top_events.update_layout(
             plot_bgcolor='#eaefff',
             paper_bgcolor='#eaefff',
             font=dict(family="Inter", size=14, color="#333"),
@@ -443,51 +445,160 @@ if all_user_summaries:
                 xanchor='center'
             )
         )
-        st.plotly_chart(fig_comparison, use_container_width=True)
+        st.plotly_chart(fig_top_events, use_container_width=True)
+    
+    # Encontrar el evento más frecuente por usuario (solo PostgreSQL)
+    top_events_df = get_top_event_per_user(postgres_user_events)
+    
+    if not top_events_df.empty:
+        st.markdown("### 📈 Evento Más Frecuente por Usuario (PostgreSQL)")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Top 10 Usuarios por Evento Más Frecuente")
+            top_events_sorted = top_events_df.nlargest(10, 'event_count')
+            st.dataframe(top_events_sorted, use_container_width=True)
+        
+        with col2:
+            # Gráfico de eventos más frecuentes
+            event_counts = top_events_df['top_event'].value_counts().head(10)
+            fig_top_events = px.bar(
+                x=event_counts.values,
+                y=event_counts.index,
+                orientation='h',
+                title='Top 10 Eventos Más Frecuentes (PostgreSQL)',
+                labels={'x': 'Número de Usuarios', 'y': 'Evento'}
+            )
+            fig_top_events.update_layout(
+                plot_bgcolor='#eaefff',
+                paper_bgcolor='#eaefff',
+                font=dict(family="Inter", size=14, color="#333"),
+                title=dict(
+                    font=dict(size=20, family="DM Sans", color="#0C1461"),
+                    x=0.5,
+                    xanchor='center'
+                )
+            )
+            st.plotly_chart(fig_top_events, use_container_width=True)
+        
+        # Análisis por fuente de datos (solo PostgreSQL)
+        st.markdown("### 🔄 Análisis de PostgreSQL")
+        
+        source_analysis = top_events_df.groupby('data_source').agg({
+            'event_count': ['mean', 'max', 'sum'],
+            'total_events': ['mean', 'max', 'sum'],
+            'user': 'count'
+        }).round(2)
+        
+        source_analysis.columns = ['Promedio Evento Top', 'Máx Evento Top', 'Total Eventos Top', 
+                                 'Promedio Total Eventos', 'Máx Total Eventos', 'Total Eventos', 'Usuarios']
+        source_analysis = source_analysis.reset_index()
+        
+        st.dataframe(source_analysis, use_container_width=True)
 
 # 3. ANÁLISIS TEMPORAL
 st.markdown("## ⏰ Análisis Temporal")
 
-# Combinar todos los archivos de actividad diaria
-all_daily_activity = []
+# Solo usar datos de MongoDB para la tercera tabla
+mongo_user_events = None
 for key, df in data.items():
-    if 'daily' in key:
-        all_daily_activity.append(df)
+    if 'MongoDB_user_events' in key:
+        mongo_user_events = df
+        break
 
-if all_daily_activity:
-    combined_daily = pd.concat(all_daily_activity, ignore_index=True)
+if mongo_user_events is not None:
+    # Mostrar tabla de usuarios vs eventos (solo MongoDB)
+    st.markdown("### 📊 Tabla de Usuarios y Eventos (MongoDB)")
     
-    # Convertir fecha
-    combined_daily['date'] = pd.to_datetime(combined_daily['date'])
+    # Obtener columnas de eventos (excluir columnas de identificación)
+    event_columns = [col for col in mongo_user_events.columns 
+                    if col not in ['user', 'email', 'applicant_id', 'data_source']]
     
-    # Gráfico de actividad temporal
-    fig_temporal = px.line(
-        combined_daily,
-        x='date',
-        y='unique_users',
-        color='data_source',
-        title='Evolución de Usuarios Únicos por Día',
-        labels={'unique_users': 'Usuarios Únicos', 'date': 'Fecha'}
-    )
-    fig_temporal.update_layout(
-        plot_bgcolor='#eaefff',
-        paper_bgcolor='#eaefff',
-        font=dict(family="Inter", size=14, color="#333"),
-        title=dict(
-            font=dict(size=20, family="DM Sans", color="#0C1461"),
-            x=0.5,
-            xanchor='center'
+    if event_columns:
+        # Crear tabla con usuarios como filas y eventos como columnas
+        user_event_table = mongo_user_events[['user', 'email', 'data_source'] + event_columns].copy()
+        
+        # Mostrar la tabla
+        st.markdown("#### Conteo de Eventos por Usuario")
+        st.dataframe(user_event_table, use_container_width=True)
+        
+        # Mostrar estadísticas de eventos
+        st.markdown("#### Estadísticas de Eventos")
+        event_stats = user_event_table[event_columns].describe().round(2)
+        st.dataframe(event_stats, use_container_width=True)
+        
+        # Gráfico de eventos más frecuentes
+        st.markdown("#### Eventos Más Frecuentes")
+        event_totals = user_event_table[event_columns].sum().sort_values(ascending=False)
+        fig_top_events = px.bar(
+            x=event_totals.values,
+            y=event_totals.index,
+            orientation='h',
+            title='Total de Eventos por Tipo (MongoDB)',
+            labels={'x': 'Total de Eventos', 'y': 'Tipo de Evento'}
         )
-    )
-    st.plotly_chart(fig_temporal, use_container_width=True)
+        fig_top_events.update_layout(
+            plot_bgcolor='#eaefff',
+            paper_bgcolor='#eaefff',
+            font=dict(family="Inter", size=14, color="#333"),
+            title=dict(
+                font=dict(size=20, family="DM Sans", color="#0C1461"),
+                x=0.5,
+                xanchor='center'
+            )
+        )
+        st.plotly_chart(fig_top_events, use_container_width=True)
     
-    # Tabla de actividad diaria
-    st.markdown("#### Actividad Diaria por Fuente")
-    daily_summary = combined_daily.groupby(['date', 'data_source']).agg({
-        'unique_users': 'sum',
-        'total_events': 'sum'
-    }).reset_index()
-    st.dataframe(daily_summary, use_container_width=True)
+    # Encontrar el evento más frecuente por usuario (solo MongoDB)
+    top_events_df = get_top_event_per_user(mongo_user_events)
+    
+    if not top_events_df.empty:
+        st.markdown("### 📈 Evento Más Frecuente por Usuario (MongoDB)")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Top 10 Usuarios por Evento Más Frecuente")
+            top_events_sorted = top_events_df.nlargest(10, 'event_count')
+            st.dataframe(top_events_sorted, use_container_width=True)
+        
+        with col2:
+            # Gráfico de eventos más frecuentes
+            event_counts = top_events_df['top_event'].value_counts().head(10)
+            fig_top_events = px.bar(
+                x=event_counts.values,
+                y=event_counts.index,
+                orientation='h',
+                title='Top 10 Eventos Más Frecuentes (MongoDB)',
+                labels={'x': 'Número de Usuarios', 'y': 'Evento'}
+            )
+            fig_top_events.update_layout(
+                plot_bgcolor='#eaefff',
+                paper_bgcolor='#eaefff',
+                font=dict(family="Inter", size=14, color="#333"),
+                title=dict(
+                    font=dict(size=20, family="DM Sans", color="#0C1461"),
+                    x=0.5,
+                    xanchor='center'
+                )
+            )
+            st.plotly_chart(fig_top_events, use_container_width=True)
+        
+        # Análisis por fuente de datos (solo MongoDB)
+        st.markdown("### 🔄 Análisis de MongoDB")
+        
+        source_analysis = top_events_df.groupby('data_source').agg({
+            'event_count': ['mean', 'max', 'sum'],
+            'total_events': ['mean', 'max', 'sum'],
+            'user': 'count'
+        }).round(2)
+        
+        source_analysis.columns = ['Promedio Evento Top', 'Máx Evento Top', 'Total Eventos Top', 
+                                 'Promedio Total Eventos', 'Máx Total Eventos', 'Total Eventos', 'Usuarios']
+        source_analysis = source_analysis.reset_index()
+        
+        st.dataframe(source_analysis, use_container_width=True)
 
 # 4. ANÁLISIS DE EVENTOS
 st.markdown("## 📊 Análisis de Eventos")
