@@ -217,7 +217,6 @@ def load_data():
             df = pd.read_csv(file_path)
             df['data_source'] = source
             data[f"{source}_user_summary"] = df
-            st.success(f"✅ {source} user_summary: {len(df)} registros")
         except Exception as e:
             st.error(f"❌ Error cargando {source} user_summary: {str(e)}")
     
@@ -226,7 +225,6 @@ def load_data():
             df = pd.read_csv(file_path)
             df['data_source'] = source
             data[f"{source}_user_events"] = df
-            st.success(f"✅ {source} user_events: {len(df)} registros")
         except Exception as e:
             st.error(f"❌ Error cargando {source} user_events: {str(e)}")
     
@@ -235,7 +233,6 @@ def load_data():
             df = pd.read_csv(file_path)
             df['data_source'] = source
             data[f"{source}_daily"] = df
-            st.success(f"✅ {source} daily_activity: {len(df)} registros")
         except Exception as e:
             st.error(f"❌ Error cargando {source} daily_activity: {str(e)}")
     
@@ -244,7 +241,6 @@ def load_data():
             df = pd.read_csv(file_path)
             df['data_source'] = source
             data[f"{source}_events"] = df
-            st.success(f"✅ {source} event_summary: {len(df)} registros")
         except Exception as e:
             st.error(f"❌ Error cargando {source} event_summary: {str(e)}")
     
@@ -253,7 +249,6 @@ def load_data():
             df = pd.read_csv(file_path)
             df['data_source'] = source
             data[f"{source}_applicants"] = df
-            st.success(f"✅ {source} applicants: {len(df)} registros")
         except Exception as e:
             st.error(f"❌ Error cargando {source} applicants: {str(e)}")
     
