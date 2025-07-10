@@ -323,9 +323,9 @@ for key, df in data.items():
             total_notes_mongo = df['campus_note'].sum()
         break
 
-# Total favoritos (buscar en Mixpanel)
+# Total favoritos (buscar en PostgreSQL)
 for key, df in data.items():
-    if 'Mixpanel_user_events' in key:
+    if 'PostgreSQL_user_events' in key:
         favorite_columns = [col for col in df.columns if 'favorite' in col.lower()]
         if favorite_columns:
             total_favorites = df[favorite_columns].sum().sum()
@@ -362,7 +362,7 @@ with col4:
     st.markdown(f"""
     <div class="kpi">
         <h2>{total_favorites:,}</h2>
-        <p>Favoritos Guardados (Mixpanel)</p>
+        <p>Favoritos Guardados (PostgreSQL)</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -372,7 +372,7 @@ st.markdown(f"""
 - **Usuarios de PostgreSQL**: {total_users_postgres:,}
 - **Eventos de Mixpanel**: {total_events_mixpanel:,}
 - **Notas guardadas en MongoDB**: {total_notes_mongo:,}
-- **Favoritos guardados en Mixpanel**: {total_favorites:,}
+- **Favoritos guardados en PostgreSQL**: {total_favorites:,}
 - **Archivos cargados**: {len(data):,}
 - **Fuentes de datos disponibles**: {', '.join(set([k.split('_')[0] for k in data.keys()]))}
 """)
