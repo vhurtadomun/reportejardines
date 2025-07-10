@@ -303,11 +303,53 @@ for key, df in data.items():
 if all_user_events:
     combined_user_events = pd.concat(all_user_events, ignore_index=True)
     
+    # Mostrar tabla de usuarios vs eventos
+    st.markdown("### 📊 Tabla de Usuarios y Eventos")
+    
+    # Obtener columnas de eventos (excluir columnas de identificación)
+    event_columns = [col for col in combined_user_events.columns 
+                    if col not in ['user', 'email', 'applicant_id', 'data_source']]
+    
+    if event_columns:
+        # Crear tabla pivotada con usuarios como filas y eventos como columnas
+        user_event_table = combined_user_events[['user', 'email', 'data_source'] + event_columns].copy()
+        
+        # Mostrar la tabla
+        st.markdown("#### Conteo de Eventos por Usuario")
+        st.dataframe(user_event_table, use_container_width=True)
+        
+        # Mostrar estadísticas de eventos
+        st.markdown("#### Estadísticas de Eventos")
+        event_stats = user_event_table[event_columns].describe().round(2)
+        st.dataframe(event_stats, use_container_width=True)
+        
+        # Gráfico de eventos más frecuentes
+        st.markdown("#### Eventos Más Frecuentes")
+        event_totals = user_event_table[event_columns].sum().sort_values(ascending=False)
+        fig_top_events = px.bar(
+            x=event_totals.values,
+            y=event_totals.index,
+            orientation='h',
+            title='Total de Eventos por Tipo',
+            labels={'x': 'Total de Eventos', 'y': 'Tipo de Evento'}
+        )
+        fig_top_events.update_layout(
+            plot_bgcolor='#eaefff',
+            paper_bgcolor='#eaefff',
+            font=dict(family="Inter", size=14, color="#333"),
+            title=dict(
+                font=dict(size=20, family="DM Sans", color="#0C1461"),
+                x=0.5,
+                xanchor='center'
+            )
+        )
+        st.plotly_chart(fig_top_events, use_container_width=True)
+    
     # Encontrar el evento más frecuente por usuario
     top_events_df = get_top_event_per_user(combined_user_events)
     
     if not top_events_df.empty:
-        st.markdown("### 📊 Evento Más Frecuente por Usuario")
+        st.markdown("### 📈 Evento Más Frecuente por Usuario")
         
         col1, col2 = st.columns(2)
         
