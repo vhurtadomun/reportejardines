@@ -167,15 +167,25 @@ st.title('Notas MongoDB')
 file_path = 'inputs/mongo_applicants_merged.csv'
 df = pd.read_csv(file_path)
 
+# Filtrar solo las filas que tienen email (excluir None, NaN, vacíos)
+df_con_email = df.dropna(subset=['email'])
+
+# Contadores
+usuarios_unicos = df_con_email['user'].nunique()
+total_notas = len(df_con_email)
+
+# Mostrar contadores en la parte superior
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("Usuarios únicos", usuarios_unicos)
+with col2:
+    st.metric("Total de notas", total_notas)
+
 # Mostrar información de diagnóstico
 st.write("**Información del dataset:**")
-st.write(f"Columnas disponibles: {list(df.columns)}")
-st.write(f"Total de filas: {len(df)}")
+st.write(f"Total de filas originales: {len(df)}")
+st.write(f"Total de filas con email: {len(df_con_email)}")
 
-# Mostrar primeras filas para ver qué datos hay
-st.write("**Primeras 3 filas del dataset:**")
-st.dataframe(df.head(3))
-
-# Mostrar solo las columnas user, email y data
-st.write("**Tabla de notas:**")
-st.dataframe(df[['user', 'email', 'data']])
+# Mostrar solo las columnas user, email y data (solo las que tienen email)
+st.write("**Tabla de notas (solo con email):**")
+st.dataframe(df_con_email[['user', 'email', 'data']])
