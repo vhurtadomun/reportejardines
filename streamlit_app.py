@@ -311,20 +311,26 @@ total_notes_mongo = 0
 total_favorites = 0
 
 # Total usuarios de PostgreSQL
-for key, df in data.items():
-    if 'PostgreSQL_user_summary' in key:
-        total_users_postgres = len(df)
-        break
+# for key, df in data.items():
+#     if 'PostgreSQL_user_summary' in key:
+#         total_users_postgres = len(df)
+#         break
+
+# Por ahora, establecer valores por defecto
+total_users_postgres = 0
 
 # Total eventos de Mixpanel
-for key, df in data.items():
-    if 'Mixpanel_user_events' in key:
-        # Sumar todos los eventos de Mixpanel
-        event_columns = [col for col in df.columns 
-                        if col not in ['user', 'email', 'applicant_id', 'data_source']]
-        if event_columns:
-            total_events_mixpanel = df[event_columns].sum().sum()
-        break
+# for key, df in data.items():
+#     if 'Mixpanel_user_events' in key:
+#         # Sumar todos los eventos de Mixpanel
+#         event_columns = [col for col in df.columns 
+#                         if col not in ['user', 'email', 'applicant_id', 'data_source']]
+#         if event_columns:
+#             total_events_mixpanel = df[event_columns].sum().sum()
+#         break
+
+# Por ahora, establecer un valor por defecto
+total_events_mixpanel = 0
 
 # Total notas de MongoDB (desde mongo_applicants_merged.csv)
 total_notes_mongo = 0
@@ -336,12 +342,15 @@ for key, df in data.items():
         break
 
 # Total favoritos (buscar en PostgreSQL)
-for key, df in data.items():
-    if 'PostgreSQL_user_events' in key:
-        favorite_columns = [col for col in df.columns if 'favorite' in col.lower()]
-        if favorite_columns:
-            total_favorites = df[favorite_columns].sum().sum()
-        break
+# for key, df in data.items():
+#     if 'PostgreSQL_user_events' in key:
+#         favorite_columns = [col for col in df.columns if 'favorite' in col.lower()]
+#         if favorite_columns:
+#             total_favorites = df[favorite_columns].sum().sum()
+#         break
+
+# Por ahora, establecer un valor por defecto
+total_favorites = 0
 
 # Mostrar KPIs generales
 col1, col2, col3, col4 = st.columns(4)
