@@ -187,7 +187,7 @@ def load_data():
     user_event_files = {
         "MongoDB": "inputs/mongo_user_event_summary.csv",
         "PostgreSQL": "inputs/postgres_user_event_summary.csv", 
-        "Mixpanel": "inputs/mixpanel_user_event_summary.csv"
+        "Mixpanel": "inputs/mixpanel_applicants_collapsed.csv"
     }
     
     # Archivos de actividad diaria
@@ -210,6 +210,9 @@ def load_data():
         "PostgreSQL": "inputs/postgres_filtered_by_applicants.csv", 
         "Mixpanel": "inputs/mixpanel_filtered_by_applicants.csv"
     }
+    
+    # Archivo de aplicantes fusionados de MongoDB
+    mongo_applicants_merged_file = "inputs/mongo_applicants_merged.csv"
     
     # Cargar todos los archivos
     for source, file_path in user_summary_files.items():
@@ -252,37 +255,44 @@ def load_data():
         except Exception as e:
             st.error(f"❌ Error cargando {source} applicants: {str(e)}")
     
+    # Cargar archivo de aplicantes fusionados de MongoDB
+    try:
+        df = pd.read_csv(mongo_applicants_merged_file)
+        data["mongo_applicants_merged"] = df
+    except Exception as e:
+        st.error(f"❌ Error cargando mongo_applicants_merged: {str(e)}")
+    
     return data
 
 # Función para encontrar el evento más frecuente por usuario
-def get_top_event_per_user(df, user_col='user', email_col='email'):
-    """Encuentra el evento más frecuente para cada usuario"""
-    event_columns = [col for col in df.columns if col not in [user_col, email_col, 'applicant_id', 'data_source']]
+# def get_top_event_per_user(df, user_col='user', email_col='email'):
+#     """Encuentra el evento más frecuente para cada usuario"""
+#     event_columns = [col for col in df.columns if col not in [user_col, email_col, 'applicant_id', 'data_source']]
     
-    if not event_columns:
-        return pd.DataFrame()
+#     if not event_columns:
+#         return pd.DataFrame()
     
-    results = []
-    for _, row in df.iterrows():
-        user = row[user_col]
-        email = row[email_col]
-        data_source = row.get('data_source', 'Unknown')
+#     results = []
+#     for _, row in df.iterrows():
+#         user = row[user_col]
+#         email = row[email_col]
+#         data_source = row.get('data_source', 'Unknown')
         
-        # Encontrar el evento con mayor valor
-        event_counts = {col: row[col] for col in event_columns if pd.notna(row[col]) and row[col] > 0}
+#         # Encontrar el evento con mayor valor
+#         event_counts = {col: row[col] for col in event_columns if pd.notna(row[col]) and row[col] > 0}
         
-        if event_counts:
-            top_event = max(event_counts.items(), key=lambda x: x[1])
-            results.append({
-                'user': user,
-                'email': email,
-                'data_source': data_source,
-                'top_event': top_event[0],
-                'event_count': top_event[1],
-                'total_events': sum(event_counts.values())
-            })
+#         if event_counts:
+#             top_event = max(event_counts.items(), key=lambda x: x[1])
+#             results.append({
+#                 'user': user,
+#                 'email': email,
+#                 'data_source': data_source,
+#                 'top_event': top_event[0],
+#                 'event_count': top_event[1],
+#                 'total_events': sum(event_counts.values())
+#             })
     
-    return pd.DataFrame(results)
+#     return pd.DataFrame(results)
 
 # Cargar datos
 data = load_data()
@@ -316,11 +326,13 @@ for key, df in data.items():
             total_events_mixpanel = df[event_columns].sum().sum()
         break
 
-# Total notas de MongoDB
+# Total notas de MongoDB (desde mongo_applicants_merged.csv)
+total_notes_mongo = 0
 for key, df in data.items():
-    if 'MongoDB_user_events' in key:
-        if 'campus_note' in df.columns:
-            total_notes_mongo = df['campus_note'].sum()
+    if 'mongo_applicants_merged' in key:
+        # Contar registros donde type es 'campus_note'
+        if 'type' in df.columns:
+            total_notes_mongo = len(df[df['type'] == 'campus_note'])
         break
 
 # Total favoritos (buscar en PostgreSQL)
@@ -377,140 +389,180 @@ st.markdown(f"""
 - **Fuentes de datos disponibles**: {', '.join(set([k.split('_')[0] for k in data.keys()]))}
 """)
 
-# 1. ANÁLISIS DE EVENTOS POR USUARIO
-st.markdown("## 🎯 Análisis de Eventos por Usuario")
-
-# Solo usar datos de Mixpanel para la tabla principal
-mixpanel_user_events = None
+# Tabla de notas guardadas
+st.markdown("### 📝 Notas Guardadas")
 for key, df in data.items():
-    if 'Mixpanel_user_events' in key:
-        mixpanel_user_events = df
+    if 'mongo_applicants_merged' in key:
+        # Filtrar solo registros de tipo campus_note
+        notes_df = df[df['type'] == 'campus_note'].copy()
+        
+        if not notes_df.empty:
+            # Función para extraer el contenido del JSON
+            def extract_note_content(data_str):
+                try:
+                    import json
+                    if isinstance(data_str, str):
+                        data_dict = json.loads(data_str)
+                        return data_dict.get('content', '')
+                    return ''
+                except:
+                    return ''
+            
+            # Extraer el contenido de las notas
+            notes_df['nota'] = notes_df['data'].apply(extract_note_content)
+            
+            # Seleccionar columnas para mostrar
+            display_columns = ['userId', 'email', 'nota']
+            available_columns = [col for col in display_columns if col in notes_df.columns]
+            
+            if available_columns:
+                # Renombrar userId a user para la visualización
+                if 'userId' in available_columns:
+                    notes_df = notes_df.rename(columns={'userId': 'user'})
+                    available_columns = ['user' if col == 'userId' else col for col in available_columns]
+                
+                # Mostrar la tabla
+                st.dataframe(notes_df[available_columns], use_container_width=True)
+            else:
+                st.info("No se encontraron columnas necesarias para mostrar las notas")
+        else:
+            st.info("No se encontraron notas guardadas")
         break
 
-if mixpanel_user_events is not None:
-    # Mostrar tabla de usuarios vs eventos (solo Mixpanel)
-    st.markdown("### 📊 Tabla de Usuarios y Eventos (Mixpanel)")
+# 1. ANÁLISIS DE EVENTOS POR USUARIO
+# st.markdown("## 🎯 Análisis de Eventos por Usuario")
+
+# # Solo usar datos de Mixpanel para la tabla principal
+# mixpanel_user_events = None
+# for key, df in data.items():
+#     if 'Mixpanel_user_events' in key:
+#         mixpanel_user_events = df
+#         break
+
+# if mixpanel_user_events is not None:
+#     # Mostrar tabla de usuarios vs eventos (solo Mixpanel)
+#     st.markdown("### 📊 Tabla de Usuarios y Eventos (Mixpanel)")
     
-    # Obtener columnas de eventos (excluir columnas de identificación)
-    event_columns = [col for col in mixpanel_user_events.columns 
-                    if col not in ['user', 'email', 'applicant_id', 'data_source']]
+#     # Obtener columnas de eventos (excluir columnas de identificación)
+#     event_columns = [col for col in mixpanel_user_events.columns 
+#                     if col not in ['user', 'email', 'applicant_id', 'data_source']]
     
-    if event_columns:
-        # Crear tabla con usuarios como filas y eventos como columnas
-        user_event_table = mixpanel_user_events[['user', 'email', 'data_source'] + event_columns].copy()
+#     if event_columns:
+#         # Crear tabla con usuarios como filas y eventos como columnas
+#         user_event_table = mixpanel_user_events[['user', 'email', 'data_source'] + event_columns].copy()
         
-        # Mostrar la tabla
-        st.markdown("#### Conteo de Eventos por Usuario")
-        st.dataframe(user_event_table, use_container_width=True)
+#         # Mostrar la tabla
+#         st.markdown("#### Conteo de Eventos por Usuario")
+#         st.dataframe(user_event_table, use_container_width=True)
 
 # 2. COMPARACIÓN ENTRE FUENTES DE DATOS
-st.markdown("## 🔄 Comparación entre Fuentes de Datos")
+# st.markdown("## 🔄 Comparación entre Fuentes de Datos")
 
-# Solo usar datos de PostgreSQL para la segunda tabla
-postgres_user_events = None
-for key, df in data.items():
-    if 'PostgreSQL_user_events' in key:
-        postgres_user_events = df
-        break
+# # Solo usar datos de PostgreSQL para la segunda tabla
+# postgres_user_events = None
+# for key, df in data.items():
+#     if 'PostgreSQL_user_events' in key:
+#         postgres_user_events = df
+#         break
 
-if postgres_user_events is not None:
-    # Mostrar tabla de usuarios vs eventos (solo PostgreSQL)
-    st.markdown("### 📊 Tabla de Usuarios y Eventos (PostgreSQL)")
+# if postgres_user_events is not None:
+#     # Mostrar tabla de usuarios vs eventos (solo PostgreSQL)
+#     st.markdown("### 📊 Tabla de Usuarios y Eventos (PostgreSQL)")
     
-    # Obtener columnas de eventos (excluir columnas de identificación)
-    event_columns = [col for col in postgres_user_events.columns 
-                    if col not in ['user', 'email', 'applicant_id', 'data_source']]
+#     # Obtener columnas de eventos (excluir columnas de identificación)
+#     event_columns = [col for col in postgres_user_events.columns 
+#                     if col not in ['user', 'email', 'applicant_id', 'data_source']]
     
-    if event_columns:
-        # Crear tabla con usuarios como filas y eventos como columnas
-        user_event_table = postgres_user_events[['user', 'email', 'data_source'] + event_columns].copy()
+#     if event_columns:
+#         # Crear tabla con usuarios como filas y eventos como columnas
+#         user_event_table = postgres_user_events[['user', 'email', 'data_source'] + event_columns].copy()
         
-        # Mostrar la tabla
-        st.markdown("#### Conteo de Eventos por Usuario")
-        st.dataframe(user_event_table, use_container_width=True)
+#         # Mostrar la tabla
+#         st.markdown("#### Conteo de Eventos por Usuario")
+#         st.dataframe(user_event_table, use_container_width=True)
 
 # 3. ANÁLISIS TEMPORAL
-st.markdown("## ⏰ Análisis Temporal")
+# st.markdown("## ⏰ Análisis Temporal")
 
-# Solo usar datos de MongoDB para la tercera tabla
-mongo_user_events = None
-for key, df in data.items():
-    if 'MongoDB_user_events' in key:
-        mongo_user_events = df
-        break
+# # Solo usar datos de MongoDB para la tercera tabla
+# mongo_user_events = None
+# for key, df in data.items():
+#     if 'MongoDB_user_events' in key:
+#         mongo_user_events = df
+#         break
 
-if mongo_user_events is not None:
-    # Mostrar tabla de usuarios vs eventos (solo MongoDB)
-    st.markdown("### 📊 Tabla de Usuarios y Eventos (MongoDB)")
+# if mongo_user_events is not None:
+#     # Mostrar tabla de usuarios vs eventos (solo MongoDB)
+#     st.markdown("### 📊 Tabla de Usuarios y Eventos (MongoDB)")
     
-    # Obtener columnas de eventos (excluir columnas de identificación)
-    event_columns = [col for col in mongo_user_events.columns 
-                    if col not in ['user', 'email', 'applicant_id', 'data_source']]
+#     # Obtener columnas de eventos (excluir columnas de identificación)
+#     event_columns = [col for col in mongo_user_events.columns 
+#                     if col not in ['user', 'email', 'applicant_id', 'data_source']]
     
-    if event_columns:
-        # Crear tabla con usuarios como filas y eventos como columnas
-        user_event_table = mongo_user_events[['user', 'email', 'data_source'] + event_columns].copy()
+#     if event_columns:
+#         # Crear tabla con usuarios como filas y eventos como columnas
+#         user_event_table = mongo_user_events[['user', 'email', 'data_source'] + event_columns].copy()
         
-        # Mostrar la tabla
-        st.markdown("#### Conteo de Eventos por Usuario")
-        st.dataframe(user_event_table, use_container_width=True)
+#         # Mostrar la tabla
+#         st.markdown("#### Conteo de Eventos por Usuario")
+#         st.dataframe(user_event_table, use_container_width=True)
 
 # 4. ANÁLISIS DE EVENTOS
-st.markdown("## 📊 Análisis de Eventos")
+# st.markdown("## 📊 Análisis de Eventos")
 
-# Combinar todos los resúmenes de eventos
-all_event_summaries = []
-for key, df in data.items():
-    if 'events' in key and 'user_events' not in key:
-        all_event_summaries.append(df)
+# # Combinar todos los resúmenes de eventos
+# all_event_summaries = []
+# for key, df in data.items():
+#     if 'events' in key and 'user_events' not in key:
+#         all_event_summaries.append(df)
 
-if all_event_summaries:
-    combined_events = pd.concat(all_event_summaries, ignore_index=True)
+# if all_event_summaries:
+#     combined_events = pd.concat(all_event_summaries, ignore_index=True)
     
-    st.markdown("#### Resumen de Eventos por Fuente")
-    st.dataframe(combined_events, use_container_width=True)
+#     st.markdown("#### Resumen de Eventos por Fuente")
+#     st.dataframe(combined_events, use_container_width=True)
 
 # 5. ANÁLISIS DE APLICANTES
-st.markdown("## 👥 Análisis de Aplicantes")
+# st.markdown("## 👥 Análisis de Aplicantes")
 
-# Combinar todos los archivos de aplicantes
-all_applicants = []
-for key, df in data.items():
-    if 'applicants' in key:
-        all_applicants.append(df)
+# # Combinar todos los archivos de aplicantes
+# all_applicants = []
+# for key, df in data.items():
+#     if 'applicants' in key:
+#         all_applicants.append(df)
 
-if all_applicants:
-    combined_applicants = pd.concat(all_applicants, ignore_index=True)
+# if all_applicants:
+#     combined_applicants = pd.concat(all_applicants, ignore_index=True)
     
-    st.markdown("#### Datos de Aplicantes por Fuente")
+#     st.markdown("#### Datos de Aplicantes por Fuente")
     
-    # Estadísticas básicas de aplicantes
-    applicant_stats = combined_applicants.groupby('data_source').agg({
-        'user': 'count'
-    }).reset_index()
-    applicant_stats.columns = ['Fuente de Datos', 'Total de Aplicantes']
+#     # Estadísticas básicas de aplicantes
+#     applicant_stats = combined_applicants.groupby('data_source').agg({
+#         'user': 'count'
+#     }).reset_index()
+#     applicant_stats.columns = ['Fuente de Datos', 'Total de Aplicantes']
     
-    col1, col2 = st.columns(2)
+#     col1, col2 = st.columns(2)
     
-    with col1:
-        st.dataframe(applicant_stats, use_container_width=True)
+#     with col1:
+#         st.dataframe(applicant_stats, use_container_width=True)
     
-    with col2:
-        # Gráfico de aplicantes por fuente
-        fig_applicants = px.pie(
-            applicant_stats,
-            values='Total de Aplicantes',
-            names='Fuente de Datos',
-            title='Distribución de Aplicantes por Fuente'
-        )
-        fig_applicants.update_layout(
-            plot_bgcolor='#eaefff',
-            paper_bgcolor='#eaefff',
-            font=dict(family="Inter", size=14, color="#333"),
-            title=dict(
-                font=dict(size=20, family="DM Sans", color="#0C1461"),
-                x=0.5,
-                xanchor='center'
-            )
-        )
-        st.plotly_chart(fig_applicants, use_container_width=True)
+#     with col2:
+#         # Gráfico de aplicantes por fuente
+#         fig_applicants = px.pie(
+#             applicant_stats,
+#             values='Total de Aplicantes',
+#             names='Fuente de Datos',
+#             title='Distribución de Aplicantes por Fuente'
+#         )
+#         fig_applicants.update_layout(
+#             plot_bgcolor='#eaefff',
+#             paper_bgcolor='#eaefff',
+#             font=dict(family="Inter", size=14, color="#333"),
+#             title=dict(
+#                 font=dict(size=20, family="DM Sans", color="#0C1461"),
+#                 x=0.5,
+#                 xanchor='center'
+#             )
+#         )
+#         st.plotly_chart(fig_applicants, use_container_width=True)
