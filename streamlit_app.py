@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+import subprocess
 from datetime import datetime
 import pytz
 from pathlib import Path
@@ -168,20 +169,61 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Función simple para obtener la última hora de actualización
+# Función para obtener la última hora de actualización desde Git
 def obtener_ultima_actualizacion():
+    fecha_a_mostrar = None
+    mensaje_fecha = "Última Actualización:"
+
+    # Intentar obtener la fecha del último commit de Git
     try:
-        archivo_mongo = BASE_PATH_INPUTS / "mongo_applicants_merged.csv"
-        if archivo_mongo.exists():
-            # Obtener fecha en UTC y convertir a zona horaria de Chile
-            fecha_utc = datetime.fromtimestamp(archivo_mongo.stat().st_mtime, tz=pytz.utc)
+        # Ruta del archivo relativa al repositorio
+        file_path_relative_to_repo = Path("inputs") / "mongo_applicants_merged.csv"
+        
+        # Comando git log para obtener la fecha del último commit
+        result = subprocess.run(
+            ['git', 'log', '-1', '--format=%cd', '--date=iso-strict', str(file_path_relative_to_repo)],
+            cwd=BASE_PATH,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        git_date_str = result.stdout.strip()
+        if git_date_str:
+            # Parsear la fecha obtenida de git y convertir a zona horaria de Chile
+            fecha_utc = datetime.fromisoformat(git_date_str)
             zona_horaria_chile = pytz.timezone('America/Santiago')
-            fecha_chile = fecha_utc.astimezone(zona_horaria_chile)
-            return fecha_chile, "Última Actualización:"
+            fecha_a_mostrar = fecha_utc.astimezone(zona_horaria_chile)
+            mensaje_fecha = "Última Actualización:"
         else:
-            return None, "Última Actualización: Archivo no encontrado"
+            st.warning(f"Git log no retornó fecha para {file_path_relative_to_repo}.")
+            
+    except FileNotFoundError:
+        st.warning("Error: Comando 'git' no encontrado en el servidor.")
+        mensaje_fecha = "Última Actualización (Error Git - No encontrado):"
+    except subprocess.CalledProcessError as e:
+        st.warning(f"Error al ejecutar comando Git: {e}")
+        mensaje_fecha = "Última Actualización (Error Git):"
     except Exception as e:
-        return None, f"Última Actualización: Error - {e}"
+        st.warning(f"Error inesperado al obtener fecha de Git: {e}")
+        mensaje_fecha = "Última Actualización (Error Inesperado):"
+
+    # Si no se pudo obtener la fecha de Git, usar la fecha de modificación del archivo como respaldo
+    if fecha_a_mostrar is None:
+        try:
+            archivo_mongo = BASE_PATH_INPUTS / "mongo_applicants_merged.csv"
+            if archivo_mongo.exists():
+                fecha_utc = datetime.fromtimestamp(archivo_mongo.stat().st_mtime, tz=pytz.utc)
+                zona_horaria_chile = pytz.timezone('America/Santiago')
+                fecha_a_mostrar = fecha_utc.astimezone(zona_horaria_chile)
+                mensaje_fecha = "Última Actualización (del archivo en Servidor - UTC):"
+            else:
+                mensaje_fecha = "Última Actualización: Archivo no encontrado"
+        except Exception as e:
+            st.warning(f"Error al obtener la fecha de última actualización del archivo: {e}")
+            mensaje_fecha = "Última Actualización: Error Archivo"
+
+    return fecha_a_mostrar, mensaje_fecha
 
 # Header azul bonito
 st.markdown("""
