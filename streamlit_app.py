@@ -173,8 +173,11 @@ def obtener_ultima_actualizacion():
     try:
         archivo_mongo = BASE_PATH_INPUTS / "mongo_applicants_merged.csv"
         if archivo_mongo.exists():
-            fecha = datetime.fromtimestamp(archivo_mongo.stat().st_mtime, tz=pytz.utc)
-            return fecha, "Última Actualización:"
+            # Obtener fecha en UTC y convertir a zona horaria de Chile
+            fecha_utc = datetime.fromtimestamp(archivo_mongo.stat().st_mtime, tz=pytz.utc)
+            zona_horaria_chile = pytz.timezone('America/Santiago')
+            fecha_chile = fecha_utc.astimezone(zona_horaria_chile)
+            return fecha_chile, "Última Actualización:"
         else:
             return None, "Última Actualización: Archivo no encontrado"
     except Exception as e:
