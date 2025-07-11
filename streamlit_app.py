@@ -265,14 +265,18 @@ with col2:
     st.metric("Total de notas", total_notas)
 
 # Renombrar columnas para mostrar
-df_mostrar = df_con_email[['user', 'email', 'data', 'campus_name', 'campusId']].copy()
+df_mostrar = df_con_email[['timestamp','user', 'email', 'data', 'campus_name', 'campusId']].copy()
 df_mostrar = df_mostrar.rename(columns={
     'campus_name': 'Nombre sede',
     'campusId': 'campus_code',
     'user': 'Usuario', 
     'email': 'Correo',
-    'data': 'Nota'
+    'data': 'Nota',
+    'timestamp': 'Fecha'
 })
+
+# Ordenar por fecha (más reciente primero)
+df_mostrar = df_mostrar.sort_values('Fecha', ascending=False)
 
 # Filtro por usuario
 usuarios_unicos = sorted(df_mostrar['Correo'].dropna().unique())
