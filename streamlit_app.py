@@ -268,14 +268,14 @@ with col2:
 df_mostrar = df_con_email[['campus_name', 'user', 'email', 'data', 'campusId']].copy()
 df_mostrar = df_mostrar.rename(columns={
     'campus_name': 'Nombre sede',
-    'campusId': 'Código campus',
+    'campusId': 'campus_code',
     'user': 'Usuario', 
     'email': 'Correo',
     'data': 'Nota'
 })
 
 # Filtro por usuario
-usuarios_unicos = sorted(df_mostrar['Usuario'].dropna().unique())
+usuarios_unicos = sorted(df_mostrar['Correo'].dropna().unique())
 usuario_seleccionado = st.selectbox(
     "Filtrar por usuario:",
     ["Todos los usuarios"] + usuarios_unicos
@@ -283,7 +283,7 @@ usuario_seleccionado = st.selectbox(
 
 # Aplicar filtro si se selecciona un usuario específico
 if usuario_seleccionado != "Todos los usuarios":
-    df_filtrado = df_mostrar[df_mostrar['Usuario'] == usuario_seleccionado]
+    df_filtrado = df_mostrar[df_mostrar['Correo'] == usuario_seleccionado]
 else:
     df_filtrado = df_mostrar
 
