@@ -169,7 +169,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Título simple adicional
-st.title('Notas MongoDB')
+st.title('Notas')
 
 # Leer el archivo
 file_path = 'inputs/mongo_applicants_merged.csv'
