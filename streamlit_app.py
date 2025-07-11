@@ -167,5 +167,15 @@ st.title('Notas MongoDB')
 file_path = 'inputs/mongo_applicants_merged.csv'
 df = pd.read_csv(file_path)
 
+# Mostrar información de diagnóstico
+st.write("**Información del dataset:**")
+st.write(f"Columnas disponibles: {list(df.columns)}")
+st.write(f"Total de filas: {len(df)}")
+
+# Mostrar primeras filas para ver qué datos hay
+st.write("**Primeras 3 filas del dataset:**")
+st.dataframe(df.head(3))
+
 # Mostrar solo las columnas user, email y data
+st.write("**Tabla de notas:**")
 st.dataframe(df[['user', 'email', 'data']])
