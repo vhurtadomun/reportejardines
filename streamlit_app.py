@@ -274,5 +274,18 @@ df_mostrar = df_mostrar.rename(columns={
     'data': 'Nota'
 })
 
-# Mostrar tabla con columnas renombradas
-st.dataframe(df_mostrar)
+# Filtro por usuario
+usuarios_unicos = sorted(df_mostrar['Usuario'].dropna().unique())
+usuario_seleccionado = st.selectbox(
+    "Filtrar por usuario:",
+    ["Todos los usuarios"] + usuarios_unicos
+)
+
+# Aplicar filtro si se selecciona un usuario específico
+if usuario_seleccionado != "Todos los usuarios":
+    df_filtrado = df_mostrar[df_mostrar['Usuario'] == usuario_seleccionado]
+else:
+    df_filtrado = df_mostrar
+
+# Mostrar tabla con columnas renombradas (sin índice)
+st.dataframe(df_filtrado, hide_index=True)
