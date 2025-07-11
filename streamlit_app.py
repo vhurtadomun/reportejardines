@@ -164,7 +164,7 @@ st.markdown("""
 st.title('Notas MongoDB')
 
 # Leer el archivo
-file_path = '/Users/Valentina/Documents/GitHub/reportejardines/inputs/mongo_applicants_merged.csv'
+file_path = 'inputs/mongo_applicants_merged.csv'
 df = pd.read_csv(file_path)
 
 # Mostrar solo las columnas user, email y data
