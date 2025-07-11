@@ -228,7 +228,7 @@ def obtener_ultima_actualizacion():
 # Header azul bonito
 st.markdown("""
     <div class="header">
-        <h1>📊 Dashboard Jardines </h1>
+        <h1>📊 Seguimiento jardines Bogotá </h1>
     </div>
 """, unsafe_allow_html=True)
 
@@ -264,5 +264,15 @@ with col1:
 with col2:
     st.metric("Total de notas", total_notas)
 
-# Mostrar solo las columnas user, email y data (solo las que tienen email)
-st.dataframe(df_con_email[['campusId', 'user', 'email', 'data']])
+# Renombrar columnas para mostrar
+df_mostrar = df_con_email[['campus_name' 'user', 'email', 'data','campusId']].copy()
+df_mostrar = df_mostrar.rename(columns={
+    'campus_name': 'Nombre sede',
+    'campusId': 'campus_code',
+    'user': 'Usuario', 
+    'email': 'Correo',
+    'data': 'Nota'
+})
+
+# Mostrar tabla con columnas renombradas
+st.dataframe(df_mostrar)
