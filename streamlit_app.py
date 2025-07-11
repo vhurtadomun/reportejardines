@@ -265,7 +265,7 @@ with col2:
     st.metric("Total de notas", total_notas)
 
 # Renombrar columnas para mostrar
-df_mostrar = df_con_email[['campus_name', 'user', 'email', 'data', 'campusId']].copy()
+df_mostrar = df_con_email[['user', 'email', 'data', 'campus_name', 'campusId']].copy()
 df_mostrar = df_mostrar.rename(columns={
     'campus_name': 'Nombre sede',
     'campusId': 'campus_code',
