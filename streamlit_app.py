@@ -344,32 +344,27 @@ for key, df in data.items():
             # Extraer el contenido de las notas
             notes_df['nota'] = notes_df['data'].apply(extract_note_content)
             
-            # Seleccionar columnas para mostrar
-            display_columns = ['userId', 'email', 'nota']
-            available_columns = [col for col in display_columns if col in notes_df.columns]
-            
-            if available_columns:
-                # Renombrar userId a user para la visualización
-                if 'userId' in available_columns:
-                    notes_df = notes_df.rename(columns={'userId': 'user'})
-                    available_columns = ['user' if col == 'userId' else col for col in available_columns]
+            # Seleccionar columnas específicas y evitar duplicados
+            if 'user' in notes_df.columns and 'email' in notes_df.columns:
+                # Crear un dataframe limpio con solo las columnas que necesitamos
+                clean_df = notes_df[['user', 'email', 'nota']].copy()
                 
                 # Limpiar y convertir tipos de datos
                 try:
                     # Convertir a string para evitar problemas con tipos de datos
-                    for col in available_columns:
-                        if col in notes_df.columns:
-                            notes_df[col] = notes_df[col].astype(str)
+                    for col in clean_df.columns:
+                        clean_df[col] = clean_df[col].astype(str)
                     
                     # Mostrar la tabla
-                    st.dataframe(notes_df[available_columns], use_container_width=True)
+                    st.dataframe(clean_df, use_container_width=True)
                 except Exception as e:
                     st.error(f"Error al mostrar la tabla: {str(e)}")
                     # Mostrar información básica como alternativa
                     st.write(f"Total de notas encontradas: {len(notes_df)}")
                     st.write("Columnas disponibles:", list(notes_df.columns))
             else:
-                st.info("No se encontraron columnas necesarias para mostrar las notas")
+                st.error("No se encontraron las columnas 'user' y 'email' necesarias")
+                st.write("Columnas disponibles:", list(notes_df.columns))
         else:
             st.info("No se encontraron notas guardadas")
         break
