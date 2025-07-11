@@ -161,6 +161,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Header azul bonito
+st.markdown("""
+    <div class="header">
+        <h1>📊 Dashboard Jardines </h1>
+    </div>
+""", unsafe_allow_html=True)
+
+# Título simple adicional
 st.title('Notas MongoDB')
 
 # Leer el archivo
@@ -181,11 +189,5 @@ with col1:
 with col2:
     st.metric("Total de notas", total_notas)
 
-# Mostrar información de diagnóstico
-st.write("**Información del dataset:**")
-st.write(f"Total de filas originales: {len(df)}")
-st.write(f"Total de filas con email: {len(df_con_email)}")
-
 # Mostrar solo las columnas user, email y data (solo las que tienen email)
-st.write("**Tabla de notas (solo con email):**")
 st.dataframe(df_con_email[['user', 'email', 'data']])
