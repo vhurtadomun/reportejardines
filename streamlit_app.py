@@ -4,6 +4,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+from datetime import datetime
+import pytz
+from pathlib import Path
+
+# Configuración de rutas
+BASE_PATH = Path(__file__).parent.resolve()
+BASE_PATH_INPUTS = BASE_PATH / "inputs"
 
 # Configuración de la página
 st.set_page_config(
@@ -161,6 +168,18 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Función simple para obtener la última hora de actualización
+def obtener_ultima_actualizacion():
+    try:
+        archivo_mongo = BASE_PATH_INPUTS / "mongo_applicants_merged.csv"
+        if archivo_mongo.exists():
+            fecha = datetime.fromtimestamp(archivo_mongo.stat().st_mtime, tz=pytz.utc)
+            return fecha, "Última Actualización:"
+        else:
+            return None, "Última Actualización: Archivo no encontrado"
+    except Exception as e:
+        return None, f"Última Actualización: Error - {e}"
+
 # Header azul bonito
 st.markdown("""
     <div class="header">
@@ -170,6 +189,17 @@ st.markdown("""
 
 # Título simple adicional
 st.title('Notas')
+
+# Agregar botón de actualización al principio
+if st.button("Actualizar Datos"):
+   st.cache_data.clear()
+
+# Obtener y mostrar la última hora de actualización
+fecha_a_mostrar, mensaje_fecha = obtener_ultima_actualizacion()
+if fecha_a_mostrar:
+    st.info(f"{mensaje_fecha} {fecha_a_mostrar.strftime('%d/%m/%Y %H:%M:%S')}")
+else:
+    st.info(mensaje_fecha)
 
 # Leer el archivo
 file_path = 'inputs/mongo_applicants_merged.csv'
@@ -190,4 +220,4 @@ with col2:
     st.metric("Total de notas", total_notas)
 
 # Mostrar solo las columnas user, email y data (solo las que tienen email)
-st.dataframe(df_con_email[['user', 'email', 'data']])
+st.dataframe(df_con_email[['campusId', 'user', 'email', 'data']])
