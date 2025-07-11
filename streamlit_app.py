@@ -354,8 +354,20 @@ for key, df in data.items():
                     notes_df = notes_df.rename(columns={'userId': 'user'})
                     available_columns = ['user' if col == 'userId' else col for col in available_columns]
                 
-                # Mostrar la tabla
-                st.dataframe(notes_df[available_columns], use_container_width=True)
+                # Limpiar y convertir tipos de datos
+                try:
+                    # Convertir a string para evitar problemas con tipos de datos
+                    for col in available_columns:
+                        if col in notes_df.columns:
+                            notes_df[col] = notes_df[col].astype(str)
+                    
+                    # Mostrar la tabla
+                    st.dataframe(notes_df[available_columns], use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error al mostrar la tabla: {str(e)}")
+                    # Mostrar información básica como alternativa
+                    st.write(f"Total de notas encontradas: {len(notes_df)}")
+                    st.write("Columnas disponibles:", list(notes_df.columns))
             else:
                 st.info("No se encontraron columnas necesarias para mostrar las notas")
         else:
