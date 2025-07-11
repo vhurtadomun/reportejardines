@@ -176,84 +176,8 @@ encabezado_con_logo("Dashboard Completo - Jardines")
 def load_data():
     data = {}
     
-    # Archivos de resumen de usuarios
-    user_summary_files = {
-        "MongoDB": "inputs/mongo_user_summary.csv",
-        "PostgreSQL": "inputs/postgres_user_summary.csv", 
-        "Mixpanel": "inputs/mixpanel_user_summary.csv"
-    }
-    
-    # Archivos de eventos por usuario
-    user_event_files = {
-        "MongoDB": "inputs/mongo_user_event_summary.csv",
-        "PostgreSQL": "inputs/postgres_user_event_summary.csv", 
-        "Mixpanel": "inputs/mixpanel_applicants_collapsed.csv"
-    }
-    
-    # Archivos de actividad diaria
-    daily_activity_files = {
-        "MongoDB": "inputs/mongo_daily_activity_summary.csv",
-        "PostgreSQL": "inputs/postgres_daily_activity_summary.csv", 
-        "Mixpanel": "inputs/mixpanel_ daily_activity_summary.csv"
-    }
-    
-    # Archivos de resumen de eventos
-    event_summary_files = {
-        "MongoDB": "inputs/mongo_event_summary.csv",
-        "PostgreSQL": "inputs/postgres_event_summary.csv", 
-        "Mixpanel": "inputs/mixpanel_event_summary.csv"
-    }
-    
-    # Archivos filtrados por aplicantes
-    applicant_files = {
-        "MongoDB": "inputs/mongo_filtered_by_applicants.csv",
-        "PostgreSQL": "inputs/postgres_filtered_by_applicants.csv", 
-        "Mixpanel": "inputs/mixpanel_filtered_by_applicants.csv"
-    }
-    
-    # Archivo de aplicantes fusionados de MongoDB
+    # Solo cargar el archivo de aplicantes fusionados de MongoDB
     mongo_applicants_merged_file = "inputs/mongo_applicants_merged.csv"
-    
-    # Cargar todos los archivos
-    for source, file_path in user_summary_files.items():
-        try:
-            df = pd.read_csv(file_path)
-            df['data_source'] = source
-            data[f"{source}_user_summary"] = df
-        except Exception as e:
-            st.error(f"❌ Error cargando {source} user_summary: {str(e)}")
-    
-    for source, file_path in user_event_files.items():
-        try:
-            df = pd.read_csv(file_path)
-            df['data_source'] = source
-            data[f"{source}_user_events"] = df
-        except Exception as e:
-            st.error(f"❌ Error cargando {source} user_events: {str(e)}")
-    
-    for source, file_path in daily_activity_files.items():
-        try:
-            df = pd.read_csv(file_path)
-            df['data_source'] = source
-            data[f"{source}_daily"] = df
-        except Exception as e:
-            st.error(f"❌ Error cargando {source} daily_activity: {str(e)}")
-    
-    for source, file_path in event_summary_files.items():
-        try:
-            df = pd.read_csv(file_path)
-            df['data_source'] = source
-            data[f"{source}_events"] = df
-        except Exception as e:
-            st.error(f"❌ Error cargando {source} event_summary: {str(e)}")
-    
-    for source, file_path in applicant_files.items():
-        try:
-            df = pd.read_csv(file_path)
-            df['data_source'] = source
-            data[f"{source}_applicants"] = df
-        except Exception as e:
-            st.error(f"❌ Error cargando {source} applicants: {str(e)}")
     
     # Cargar archivo de aplicantes fusionados de MongoDB
     try:
@@ -302,101 +226,101 @@ if not data:
     st.stop()
 
 # 6. RESUMEN GENERAL
-st.markdown("Resumen General")
+# st.markdown("Resumen General")
 
-# Calcular estadísticas específicas por fuente
-total_users_postgres = 0
-total_events_mixpanel = 0
-total_notes_mongo = 0
-total_favorites = 0
+# # Calcular estadísticas específicas por fuente
+# total_users_postgres = 0
+# total_events_mixpanel = 0
+# total_notes_mongo = 0
+# total_favorites = 0
 
-# Total usuarios de PostgreSQL
+# # Total usuarios de PostgreSQL
+# # for key, df in data.items():
+# #     if 'PostgreSQL_user_summary' in key:
+# #         total_users_postgres = len(df)
+# #         break
+
+# # Por ahora, establecer valores por defecto
+# total_users_postgres = 0
+
+# # Total eventos de Mixpanel
+# # for key, df in data.items():
+# #     if 'Mixpanel_user_events' in key:
+# #         # Sumar todos los eventos de Mixpanel
+# #         event_columns = [col for col in df.columns 
+# #                         if col not in ['user', 'email', 'applicant_id', 'data_source']]
+# #         if event_columns:
+# #             total_events_mixpanel = df[event_columns].sum().sum()
+# #         break
+
+# # Por ahora, establecer un valor por defecto
+# total_events_mixpanel = 0
+
+# # Total notas de MongoDB (desde mongo_applicants_merged.csv)
+# total_notes_mongo = 0
 # for key, df in data.items():
-#     if 'PostgreSQL_user_summary' in key:
-#         total_users_postgres = len(df)
+#     if 'mongo_applicants_merged' in key:
+#         # Contar registros donde type es 'campus_note'
+#         if 'type' in df.columns:
+#             total_notes_mongo = len(df[df['type'] == 'campus_note'])
 #         break
 
-# Por ahora, establecer valores por defecto
-total_users_postgres = 0
-
-# Total eventos de Mixpanel
-# for key, df in data.items():
-#     if 'Mixpanel_user_events' in key:
-#         # Sumar todos los eventos de Mixpanel
-#         event_columns = [col for col in df.columns 
-#                         if col not in ['user', 'email', 'applicant_id', 'data_source']]
-#         if event_columns:
-#             total_events_mixpanel = df[event_columns].sum().sum()
-#         break
-
-# Por ahora, establecer un valor por defecto
-total_events_mixpanel = 0
-
-# Total notas de MongoDB (desde mongo_applicants_merged.csv)
-total_notes_mongo = 0
-for key, df in data.items():
-    if 'mongo_applicants_merged' in key:
-        # Contar registros donde type es 'campus_note'
-        if 'type' in df.columns:
-            total_notes_mongo = len(df[df['type'] == 'campus_note'])
-        break
-
-# Total favoritos (buscar en PostgreSQL)
-# for key, df in data.items():
-#     if 'PostgreSQL_user_events' in key:
-#         favorite_columns = [col for col in df.columns if 'favorite' in col.lower()]
+# # Total favoritos (buscar en PostgreSQL)
+# # for key, df in data.items():
+# #     if 'PostgreSQL_user_events' in key:
+# #         favorite_columns = [col for col in df.columns if 'favorite' in col.lower()]
 #         if favorite_columns:
 #             total_favorites = df[favorite_columns].sum().sum()
 #         break
 
-# Por ahora, establecer un valor por defecto
-total_favorites = 0
+# # Por ahora, establecer un valor por defecto
+# total_favorites = 0
 
-# Mostrar KPIs generales
-col1, col2, col3, col4 = st.columns(4)
+# # Mostrar KPIs generales
+# col1, col2, col3, col4 = st.columns(4)
 
-with col1:
-    st.markdown(f"""
-    <div class="kpi">
-        <h2>{total_users_postgres:,}</h2>
-        <p>Total de Usuarios (PostgreSQL)</p>
-    </div>
-    """, unsafe_allow_html=True)
+# with col1:
+#     st.markdown(f"""
+#     <div class="kpi">
+#         <h2>{total_users_postgres:,}</h2>
+#         <p>Total de Usuarios (PostgreSQL)</p>
+#     </div>
+#     """, unsafe_allow_html=True)
 
-with col2:
-    st.markdown(f"""
-    <div class="kpi">
-        <h2>{total_events_mixpanel:,}</h2>
-        <p>Total de Eventos (Mixpanel)</p>
-    </div>
-    """, unsafe_allow_html=True)
+# with col2:
+#     st.markdown(f"""
+#     <div class="kpi">
+#         <h2>{total_events_mixpanel:,}</h2>
+#         <p>Total de Eventos (Mixpanel)</p>
+#     </div>
+#     """, unsafe_allow_html=True)
 
-with col3:
-    st.markdown(f"""
-    <div class="kpi">
-        <h2>{total_notes_mongo:,}</h2>
-        <p>Notas Guardadas (MongoDB)</p>
-    </div>
-    """, unsafe_allow_html=True)
+# with col3:
+#     st.markdown(f"""
+#     <div class="kpi">
+#         <h2>{total_notes_mongo:,}</h2>
+#         <p>Notas Guardadas (MongoDB)</p>
+#     </div>
+#     """, unsafe_allow_html=True)
 
-with col4:
-    st.markdown(f"""
-    <div class="kpi">
-        <h2>{total_favorites:,}</h2>
-        <p>Favoritos Guardados (PostgreSQL)</p>
-    </div>
-    """, unsafe_allow_html=True)
+# with col4:
+#     st.markdown(f"""
+#     <div class="kpi">
+#         <h2>{total_favorites:,}</h2>
+#         <p>Favoritos Guardados (PostgreSQL)</p>
+#     </div>
+#     """, unsafe_allow_html=True)
 
-# Mostrar información detallada
-st.markdown("### 📊 Información Detallada")
-st.markdown(f"""
-- **Usuarios de PostgreSQL**: {total_users_postgres:,}
-- **Eventos de Mixpanel**: {total_events_mixpanel:,}
-- **Notas guardadas en MongoDB**: {total_notes_mongo:,}
-- **Favoritos guardados en PostgreSQL**: {total_favorites:,}
-- **Archivos cargados**: {len(data):,}
-- **Fuentes de datos disponibles**: {', '.join(set([k.split('_')[0] for k in data.keys()]))}
-""")
+# # Mostrar información detallada
+# st.markdown("### 📊 Información Detallada")
+# st.markdown(f"""
+# - **Usuarios de PostgreSQL**: {total_users_postgres:,}
+# - **Eventos de Mixpanel**: {total_events_mixpanel:,}
+# - **Notas guardadas en MongoDB**: {total_notes_mongo:,}
+# - **Favoritos guardados en PostgreSQL**: {total_favorites:,}
+# - **Archivos cargados**: {len(data):,}
+# - **Fuentes de datos disponibles**: {', '.join(set([k.split('_')[0] for k in data.keys()]))}
+# """)
 
 # Tabla de notas guardadas
 st.markdown("### 📝 Notas Guardadas")
