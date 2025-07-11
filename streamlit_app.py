@@ -344,27 +344,20 @@ for key, df in data.items():
             # Extraer el contenido de las notas
             notes_df['nota'] = notes_df['data'].apply(extract_note_content)
             
-            # Seleccionar columnas específicas y evitar duplicados
-            if 'user' in notes_df.columns and 'email' in notes_df.columns:
-                # Crear un dataframe limpio con solo las columnas que necesitamos
-                clean_df = notes_df[['user', 'email', 'nota']].copy()
+            # Mostrar directamente las columnas que necesitamos
+            try:
+                # Seleccionar columnas directamente
+                display_df = notes_df[['user', 'email', 'nota']].copy()
                 
-                # Limpiar y convertir tipos de datos
-                try:
-                    # Convertir a string para evitar problemas con tipos de datos
-                    for col in clean_df.columns:
-                        clean_df[col] = clean_df[col].astype(str)
-                    
-                    # Mostrar la tabla
-                    st.dataframe(clean_df, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Error al mostrar la tabla: {str(e)}")
-                    # Mostrar información básica como alternativa
-                    st.write(f"Total de notas encontradas: {len(notes_df)}")
-                    st.write("Columnas disponibles:", list(notes_df.columns))
-            else:
-                st.error("No se encontraron las columnas 'user' y 'email' necesarias")
+                # Mostrar la tabla
+                st.dataframe(display_df, use_container_width=True)
+                
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+                # Mostrar todas las columnas disponibles
                 st.write("Columnas disponibles:", list(notes_df.columns))
+                st.write("Primeras filas completas:")
+                st.write(notes_df.head())
         else:
             st.info("No se encontraron notas guardadas")
         break
